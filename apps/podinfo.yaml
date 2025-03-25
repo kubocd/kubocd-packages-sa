@@ -1,0 +1,39 @@
+
+
+apiVersion: v1alpha1
+metadata:
+  type: Application
+  name: podinfo
+  version: 0.1.1
+spec:
+  parametersSchema:
+    properties:
+      hostname: { type: string, required: false }
+  contextSchema:
+    properties:
+      ingress:
+        required: true
+        properties:
+          className: { type: string, default: "nginx"}
+          hostPostfix: { type: string, required: true }
+  modules:
+    - name: main
+      source:
+        helmRepository:
+          url: https://stefanprodan.github.io/podinfo
+          chart: podinfo
+          version: 6.7.1
+      values: |
+        ingress:
+          enabled: true
+          className: {{ .Context.ingress.className  }}
+          hosts:
+            - host: {{ .Parameters.hostname | default (printf "podinfo-%s" .Release.metadata.namespace) }}.{{ .Context.ingress.hostPostfix }}
+              paths:
+                - path: /
+                  pathType: ImplementationSpecific
+        {{- $redirection := imageRedirect "ghcr.io/stefanprodan/podinfo:6.7.1" . }}
+        image: 
+          repository: {{ $redirection.repository }}
+          pullPolicy: {{ $redirection.imagePullPolicy | default "IfNotPresent" }}
+          tag: {{ $redirection.tag }} 

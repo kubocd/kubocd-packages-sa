@@ -1,0 +1,105 @@
+
+
+apiVersion: v1alpha1
+metadata:
+  type: Application
+  name: redis
+  version: 0.1.1
+spec:
+  description: Redis and a front UI
+  templateHeader: | 
+    {{- $uiHostName :=  .Parameters.commander.hostname | default (printf "%s-%s-ui" .Release.metadata.name .Release.metadata.namespace) -}}
+  usage: |
+    Redis UI can be accessed using https://{{ $uiHostName }}.{{ .Context.ingress.hostPostfix }}
+  parametersSchema:
+    description: Redis stack
+    properties:
+      redis:
+        required: false
+        properties:
+          password: { type: string, default: redis123 }
+          replicaCount: { type: integer, default: 1, description: "The number of replicas"}
+      commander:
+        required: true
+        properties:
+          enabled: { type: boolean, default: true }
+          tls: { type: boolean, default: false }
+          hostname: { type: string, required: false }
+  contextSchema:
+    properties:
+      ingress:
+        required: true
+        properties:
+          className: { type: string, default: "nginx"}
+          clusterIssuer: { type: string }
+          hostPostfix: { type: string, required: true }
+  modules:
+    - name: redis
+      source:
+        oci:
+          repository: registry-1.docker.io/bitnamicharts/redis
+          tag: 20.6.1
+      values: |
+        fullnameOverride: {{ .Release.metadata.name }}
+        global:
+          redis:
+            password: {{ .Parameters.redis.password }}
+          security:
+            allowInsecureImages: true
+        master:
+          persistence:
+            enabled: false
+        replica:
+          persistence:
+            enabled: false
+          replicaCount: {{ .Parameters.redis.replicaCount }}
+        image:
+          {{ $redirection := imageRedirect "docker.io/bitnami/redis" . }}
+          registry: {{ $redirection.registry }}
+          repository: {{ $redirection.baseRepository }}
+          pullPolicy: {{ $redirection.imagePullPolicy | default "IfNotPresent" }}
+
+    - name: commander
+      enabled: "{{ .Parameters.commander.enabled }}"
+      source:
+        git:
+          url: https://github.com/joeferner/redis-commander.git
+          path: k8s/helm-chart/redis-commander
+          branch: master
+      values: |
+        redis:
+          # host is <fullnameOverride>-<moduleName>-master
+          host: {{ printf "%s-master" .Release.metadata.name }}
+          password: {{ .Parameters.redis.password }}
+        image: 
+          {{ $redirection := imageRedirect "ghcr.io/joeferner/redis-commander" . }}
+          repository: {{ $redirection.repository }}
+          pullPolicy: {{ $redirection.imagePullPolicy | default "Always" }}
+        ingress:
+          enabled: true
+          className: {{ .Context.ingress.className }}
+          {{- if .Parameters.tls }}
+          annotations:
+            cert-manager.io/cluster-issuer: {{ required ".Context.ingress.clusterIssuer must be defined if tls: true" .Context.ingress.clusterIssuer }}
+          {{- end }}
+          hosts:
+            - host: {{ $uiHostName }}.{{ .Context.ingress.hostPostfix }}
+              paths:
+                - "/"
+          {{- if .Parameters.tls }}
+          tls:
+            - secretName: {{ .Release.metadata.name }}-tls
+              hosts:
+                - {{ $uiHostName }}.{{ .Context.ingress.hostPostfix }}
+          {{- end }}
+      dependsOn:
+        - redis
+  roles: |
+    - redis
+    {{ if .Parameters.commander.enabled }}
+    - redis-ui
+    {{ end }}
+  dependencies: |
+    {{ if .Parameters.commander.enabled }}
+    - ingress
+    {{ end }}
