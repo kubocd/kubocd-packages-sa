@@ -64,7 +64,7 @@ spec:
       source:
         git:
           url: https://github.com/joeferner/redis-commander.git
-          path: k8s/helm-chart/redis-commander
+          path: ././k8s/helm-chart/redis-commander
           branch: master
       values: |
         redis:
