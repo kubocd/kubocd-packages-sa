@@ -1,0 +1,21 @@
+
+
+---
+apiVersion: kubocd.kubotal.io/v1alpha1
+kind: Release
+metadata:
+  name: metallb
+spec:
+  description: The load balancer
+  application:
+    repository: quay.io/kubocd/applications/metallb
+    tag: 0.1.0
+    interval: 30m
+  contexts:
+    - name: cluster
+      namespace: contexts
+  debug:
+    dumpContext: true
+  targetNamespace: metallb
+  createNamespace: true
+
