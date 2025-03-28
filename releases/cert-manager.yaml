@@ -18,7 +18,7 @@ spec:
         - name: cluster-internal
   application:
     repository: quay.io/kubocd/applications/cert-manager
-    tag: 1.0.0
+    tag: 0.1.0
     interval: 30m
   contexts:
     - name: cluster

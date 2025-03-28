@@ -18,6 +18,19 @@ spec:
           url: https://metallb.github.io/metallb
           chart: metallb
           version: 0.14.9
+      values: |
+        controller:
+          image:
+            {{ $redirection := imageRedirect "quay.io/metallb/controller" . }}
+            repository: {{ $redirection.repository }}
+        speaker:
+          image:
+            {{ $redirection := imageRedirect "quay.io/metallb/speaker" . }}
+            repository: {{ $redirection.repository }}
+          frr:
+            image:
+              {{ $redirection := imageRedirect "quay.io/frrouting/frr" . }}
+              repository: {{ $redirection.repository }}
     - name: pool
       source:
         local:

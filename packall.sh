@@ -6,7 +6,7 @@ export OCI_REPO_PREFIX=localhost:5001/applications
 
 export MYDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-for app in apps/*
+for app in apps/*.yaml
 do
   echo
   echo "=============================================== Will pack $app"

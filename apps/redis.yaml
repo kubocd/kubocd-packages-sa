@@ -4,13 +4,13 @@ apiVersion: v1alpha1
 metadata:
   type: Application
   name: redis
-  version: 0.1.1
+  version: 0.1.0
 spec:
   description: Redis and a front UI
   templateHeader: | 
     {{- $uiHostName :=  .Parameters.commander.hostname | default (printf "%s-%s-ui" .Release.metadata.name .Release.metadata.namespace) -}}
   usage: |
-    Redis UI can be accessed using https://{{ $uiHostName }}.{{ .Context.ingress.hostPostfix }}
+    Redis UI can be accessed using {{if .Parameters.commander.tls}}https{{else}}http{{end}}://{{ $uiHostName }}.{{.Context.ingress.hostPostfix}}
   parametersSchema:
     description: Redis stack
     properties:
@@ -58,7 +58,6 @@ spec:
           registry: {{ $redirection.registry }}
           repository: {{ $redirection.baseRepository }}
           pullPolicy: {{ $redirection.imagePullPolicy | default "IfNotPresent" }}
-
     - name: commander
       enabled: "{{ .Parameters.commander.enabled }}"
       source:
@@ -78,19 +77,19 @@ spec:
         ingress:
           enabled: true
           className: {{ .Context.ingress.className }}
-          {{- if .Parameters.tls }}
+          {{- if .Parameters.commander.tls }}
           annotations:
-            cert-manager.io/cluster-issuer: {{ required ".Context.ingress.clusterIssuer must be defined if tls: true" .Context.ingress.clusterIssuer }}
+            cert-manager.io/cluster-issuer: {{ required ".Context.certificateIssuer.public must be defined if tls: true" .Context.certificateIssuer.public }}
           {{- end }}
           hosts:
-            - host: {{ $uiHostName }}.{{ .Context.ingress.hostPostfix }}
+            - host: {{ $uiHostName }}.{{.Context.ingress.hostPostfix}}
               paths:
                 - "/"
-          {{- if .Parameters.tls }}
+          {{- if .Parameters.commander.tls }}
           tls:
             - secretName: {{ .Release.metadata.name }}-tls
               hosts:
-                - {{ $uiHostName }}.{{ .Context.ingress.hostPostfix }}
+                - {{ $uiHostName }}.{{.Context.ingress.hostPostfix}}
           {{- end }}
       dependsOn:
         - redis
@@ -100,6 +99,9 @@ spec:
     - redis-ui
     {{ end }}
   dependencies: |
-    {{ if .Parameters.commander.enabled }}
+    {{- if .Parameters.commander.enabled -}}
     - ingress
-    {{ end }}
+    {{- if .Parameters.commander.tls }}
+    - certManager
+    {{- end -}}
+    {{- end -}}

@@ -4,17 +4,18 @@
 apiVersion: kubocd.kubotal.io/v1alpha1
 kind: Release
 metadata:
-  name: podinfo
+  name: ingress-nginx
 spec:
-  description: A first sample release of podinfo
+  description: The Ingress controller
   application:
-    repository: quay.io/kubocd/applications/podinfo
+    repository: quay.io/kubocd/applications/ingress-nginx
     tag: 0.1.0
     interval: 30m
-  parameters:
-    tls: true
   contexts:
     - name: cluster
       namespace: contexts
   debug:
     dumpContext: true
+  targetNamespace: ingress-nginx
+  createNamespace: true
+

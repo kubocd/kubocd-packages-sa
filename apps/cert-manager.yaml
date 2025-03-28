@@ -3,7 +3,7 @@ apiVersion: v1alpha1
 metadata:
   type: Application
   name: cert-manager
-  version: 1.0.0
+  version: 0.1.0
 spec:
   parametersSchema:
     properties:
@@ -65,4 +65,4 @@ spec:
       dependsOn:
         - main
   roles:
-    - cert-manager
+    - certManager
