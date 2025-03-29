@@ -99,9 +99,9 @@ spec:
     - redis-ui
     {{ end }}
   dependencies: |
-    {{- if .Parameters.commander.enabled -}}
+    {{ if .Parameters.commander.enabled }}
     - ingress
-    {{- if .Parameters.commander.tls }}
+    {{ if .Parameters.commander.tls }}
     - certManager
-    {{- end -}}
-    {{- end -}}
+    {{ end }}
+    {{ end }}

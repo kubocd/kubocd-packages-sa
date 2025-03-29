@@ -6,14 +6,12 @@ kind: Release
 metadata:
   name: ingress-nginx
 spec:
+  protected: true
   description: The Ingress controller
   application:
     repository: quay.io/kubocd/applications/ingress-nginx
     tag: 0.1.0
     interval: 30m
-  contexts:
-    - name: cluster
-      namespace: contexts
   debug:
     dumpContext: true
   targetNamespace: ingress-nginx

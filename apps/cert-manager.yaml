@@ -62,7 +62,12 @@ spec:
           path: ../charts/cert-issuers/0.1.0
       values: |
         {{ toYaml .Parameters.issuers }}
-      dependsOn:
+        bundle:
+          enabled: {{ .Parameters.trust.enabled }}
+      dependsOn: |
         - main
+        {{ if .Parameters.trust.enabled }}
+        - trust
+        {{ end }}
   roles:
     - certManager

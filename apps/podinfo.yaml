@@ -54,6 +54,6 @@ spec:
           tag: {{ $redirection.tag }} 
   dependencies: |
     - ingress
-    {{- if .Parameters.tls }}
+    {{ if .Parameters.tls }}
     - certManager
-    {{- end -}}
+    {{ end }}

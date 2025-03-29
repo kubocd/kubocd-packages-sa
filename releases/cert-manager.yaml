@@ -6,6 +6,7 @@ kind: Release
 metadata:
   name: cert-manager
 spec:
+  protected: true
   parameters:
     trust:
       enabled: true
@@ -20,9 +21,6 @@ spec:
     repository: quay.io/kubocd/applications/cert-manager
     tag: 0.1.0
     interval: 30m
-  contexts:
-    - name: cluster
-      namespace: contexts
   debug:
     dumpContext: true
   targetNamespace: cert-manager

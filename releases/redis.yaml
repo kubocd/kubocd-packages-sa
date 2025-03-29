@@ -5,6 +5,7 @@ apiVersion: kubocd.kubotal.io/v1alpha1
 kind: Release
 metadata:
   name: redis
+  namespace: default
 spec:
   parameters:
     commander:
@@ -13,8 +14,5 @@ spec:
     repository: quay.io/kubocd/applications/redis
     tag: 0.1.0
     interval: 30m
-  contexts:
-    - name: cluster
-      namespace: contexts
   debug:
     dumpContext: true
