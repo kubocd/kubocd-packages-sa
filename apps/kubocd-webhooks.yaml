@@ -16,9 +16,9 @@ spec:
     - name: main
       source:
         oci:
-          repository:  ghcr.io/sergealexandre/kubocd/charts/kubocd
-          #repository: pull quay.io/kubocd/charts/kubocd
-          tag: v0.1.1-snapshot
+          #repository:  ghcr.io/sergealexandre/kubocd/charts/kubocd
+          repository: quay.io/kubocd/charts/kubocd
+          tag: v0.1.1
       values: |
         image:
           {{ $redirection := imageRedirect "quay.io/kubocd/kubocd" . }}
