@@ -23,7 +23,15 @@ selfSignedClusterIssuers: []
 
 # require trust-manager
 bundle:
-  enabled: true
-  name: root-certs.pem
+  name: certs-bundle
   namespaceSelector:
     matchLabels: {}   # All namespaces
+  target:
+    configMap:
+      enabled: false
+      key: root-certs.pem
+    secret:
+      enabled: false
+      key: ca.crt
+
+

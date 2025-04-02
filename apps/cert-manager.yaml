@@ -3,13 +3,26 @@ apiVersion: v1alpha1
 metadata:
   type: Application
   name: cert-manager
-  version: 0.1.0
+  version: 0.1.1
 spec:
   parametersSchema:
     properties:
       trust:
         properties:
           enabled: { type: boolean, default: false }
+          bundle:
+            properties:
+              name: { type: string, default: certs-bundle }
+              target:
+                properties:
+                  configMap:
+                    properties:
+                      enabled: { type: boolean, default: false }
+                      key: { type: string, default: "root-certs.pem" }
+                  secret:
+                    properties:
+                      enabled: { type: boolean, default: false }
+                      key: { type: string, default: "ca.crt" }
       issuers:
         properties:
           enabled: { type: boolean, default: true }
@@ -49,7 +62,9 @@ spec:
           trust:
             namespace: {{ .Release.spec.targetNamespace }}
         secretTargets:
-          enabled: false
+          enabled: {{ and .Parameters.trust.enabled .Parameters.trust.bundle.target.secret.enabled }}
+          authorizedSecrets:
+            - {{ .Parameters.trust.bundle.name }}
         image:
           {{ $redirection := imageRedirect "quay.io/jetstack/trust-manager" . }}
           repository: {{ $redirection.repository }}
@@ -63,10 +78,17 @@ spec:
       values: |
         {{ toYaml .Parameters.issuers }}
         bundle:
-          enabled: {{ .Parameters.trust.enabled }}
+          name: {{ .Parameters.trust.bundle.name }}
+          target:
+            configMap:
+              enabled: {{ .Parameters.trust.bundle.target.configMap.enabled }}
+              key: {{ .Parameters.trust.bundle.target.configMap.key }}
+            secret:
+              enabled: {{ .Parameters.trust.bundle.target.secret.enabled }}
+              key: {{ .Parameters.trust.bundle.target.secret.key }}
       dependsOn: |
         - main
-        {{ if .Parameters.trust.enabled }}
+        {{ if and .Parameters.trust.enabled }}
         - trust
         {{ end }}
   roles:

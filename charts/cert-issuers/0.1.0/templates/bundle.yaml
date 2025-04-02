@@ -1,4 +1,4 @@
-{{- if .Values.bundle.enabled }}
+{{- if (or .Values.bundle.target.secret.enabled .Values.bundle.target.configMap.enabled)}}
 ---
 apiVersion: trust.cert-manager.io/v1alpha1
 kind: Bundle
@@ -19,8 +19,14 @@ spec:
         key: "tls.crt"
 {{- end }}
   target:
+  {{- if .Values.bundle.target.configMap.enabled }}
     configMap:
-      key: "root-certs.pem"
+      key: {{ .Values.bundle.target.configMap.key }}
+  {{- end }}
+  {{- if .Values.bundle.target.secret.enabled }}
+    secret:
+      key: {{ .Values.bundle.target.secret.key }}
+  {{- end }}
     additionalFormats:
       jks:
         key: "bundle.jks"
