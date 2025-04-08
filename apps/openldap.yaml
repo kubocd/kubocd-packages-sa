@@ -41,7 +41,7 @@ spec:
     - name: main
       source:
         local:
-          path: ../charts/openldap/4.2.2
+          path: ../charts/openldap/4.3.3
       values: |
         openldap-stack-ha:
           replicaCount: {{ default 2 .Parameters.replicaCount }}

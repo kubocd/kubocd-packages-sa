@@ -20,7 +20,7 @@ openldap-stack-ha:
 
   initTLSSecret:
     tls_enabled: true
-    secret: openldap-cert
+    secret:
 
   persistence:
     storageClass: # TBD

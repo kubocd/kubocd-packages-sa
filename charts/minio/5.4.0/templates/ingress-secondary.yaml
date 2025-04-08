@@ -1,0 +1,54 @@
+
+
+# This is ingress controller to access minio under another (public) CA
+# (The primary one use the minio internal CA which my be not referenced in client system).
+# Drawback of using this ingress is lost of performance.
+{{ if .Values.minio.secondaryIngress.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Release.Name }}-secondary
+  namespace: {{ .Release.Namespace  }}
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 130m   # As minio put uses chunk of 128MB
+  {{ if and .Values.minio.clusterIssuer .Values.minio.secondaryIngress.clusterIssuer }}
+    # SSL both on input and output
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: {{ .Values.minio.secondaryIngress.clusterIssuer }}
+  {{ end }}
+  {{ if not (and .Values.minio.clusterIssuer .Values.minio.secondaryIngress.clusterIssuer) }}
+    # No SSL at all
+  {{ end }}
+  {{ if and (not .Values.minio.clusterIssuer) .Values.minio.secondaryIngress.clusterIssuer }}
+    # SSL on input, but not on output
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: {{ .Values.minio.secondaryIngress.clusterIssuer }}
+  {{ end }}
+  {{ if and .Values.minio.clusterIssuer (not .Values.minio.secondaryIngress.clusterIssuer) }}
+    # SSL on output, but not on input
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+  {{ end }}
+  labels:
+    app: minio-ingress-secondary
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: {{ required "ingressHost must be defined for minio.secondaryIngress!" .Values.minio.secondaryIngress.host }}
+      http:
+        paths:
+          - backend:
+              service:
+                name: minio
+                port:
+                  number: 9000
+            path: /
+            pathType: Prefix
+  {{ if  .Values.minio.secondaryIngress.clusterIssuer }}
+  tls:
+    - hosts:
+        - {{ .Values.minio.secondaryIngress.host }}
+      secretName: {{ .Release.Name }}-secondary-tls
+  {{ end }}
+{{ end }}

@@ -1,0 +1,31 @@
+
+# This is an ingress to access minio in plain text (No encryption).
+# Use this only for testing purpose. NEVER IN PRODUCTION
+{{ if .Values.minio.clearTextIngress.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Release.Name }}-clear-text
+  namespace: {{ .Release.Namespace  }}
+  {{ if .Values.minio.clusterIssuer }}
+  annotations:
+    # SSL on output, but not on input
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+  {{ end }}
+  labels:
+    app: minio-ingress-clear-text
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: {{ required "ingressHost must be defined for minio.clearTextIngress!" .Values.minio.clearTextIngress.host }}
+      http:
+        paths:
+          - backend:
+              service:
+                name: minio
+                port:
+                  number: 9000
+            path: /
+            pathType: Prefix
+{{ end }}

@@ -1,7 +1,7 @@
 apiVersion: v2
 name: kubocd-openldap
-version: 4.2.2
+version: 4.3.3
 dependencies:
   - name: openldap-stack-ha
-    version: 4.2.2
+    version: 4.3.3
     repository: https://jp-gouin.github.io/helm-openldap/

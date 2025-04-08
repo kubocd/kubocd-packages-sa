@@ -3,4 +3,6 @@
 
 .render
 .dump
+.charts
 tmp
+scratch

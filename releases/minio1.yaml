@@ -1,0 +1,33 @@
+
+---
+apiVersion: kubocd.kubotal.io/v1alpha1
+kind: Release
+metadata:
+  name: minio1
+spec:
+  description: S3 storage sever
+  protected: false
+  application:
+    #repository: quay.io/kubocd/applications/minio
+    repository: host.docker.internal:5001/applications/minio
+    certSecretRef:
+      name: certs-bundle
+    tag: 0.1.0
+    interval: 30s
+  debug:
+    dumpContext: true
+  targetNamespace: minio1
+  createNamespace: true
+  parameters:
+    rootUser: minio
+    rootPassword: minio123
+    storage:
+      driveSize: 10G
+    ingresses:
+      public:
+        enabled: true
+      clearText:
+        enabled: true
+    vip:
+      enabled: true
+      host: 172.18.105.3

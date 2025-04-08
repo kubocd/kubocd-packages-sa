@@ -1,0 +1,118 @@
+
+apiVersion: v1alpha1
+metadata:
+  type: Application
+  name: minio
+  version: 0.1.0
+spec:
+  parametersSchema:
+    properties:
+      rootUser: { type: string, required: true }
+      rootPassword: { type: string, required: true }
+      storage:
+        required: true
+        properties:
+          # The regex is double escaped in JSON (\\d, \\.) because JSON strings treat backslashes as escape characters.
+          driveSize: { type: string, required: true, pattern: "^([+-]?[0-9.]+)([eEinumkKMGTP]*[-+]?[0-9]*)$" }
+          #driveSize: { type: string, required: true, pattern: '^\d+(?:\.\d+)?(Ki|Mi|Gi|Ti|Pi|Ei|KB|MB|GB|TB|PB|EB)$' }
+          drivesPerNode: { type: integer, enum: [ 1, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56 ], default: 1 }
+          replicas: { type: integer, enum: [ 1, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56 ], default: 1 }
+          pools: { type: integer, default: 1 }
+      ingresses:
+        properties:
+          passThrough:
+            properties:
+              enabled: { type: boolean, default: true }
+              host: { type: string }
+          console:
+            properties:
+              enabled: { type: boolean, default: true }
+              host: { type: string }
+          public:
+            properties:
+              enabled: { type: boolean, default: false }
+              host: { type: string }
+          clearText:
+            properties:
+              enabled: { type: boolean, default: false }
+              host: { type: string }
+      vip:
+        properties:
+          enabled: { type: boolean, default: false }
+          host: { type: string, required: true }
+      environment:
+        properties:
+          MINIO_IDENTITY_LDAP_SERVER_ADDR: { type: string }
+          MINIO_IDENTITY_LDAP_LOOKUP_BIND_DN: { type: string }
+          MINIO_IDENTITY_LDAP_LOOKUP_BIND_PASSWORD: { type: string }
+          MINIO_IDENTITY_LDAP_USER_DN_SEARCH_BASE_DN: { type: string }
+          MINIO_IDENTITY_LDAP_USER_DN_SEARCH_FILTER: { type: string }
+          MINIO_IDENTITY_LDAP_GROUP_SEARCH_BASE_DN: { type: string }
+          MINIO_IDENTITY_LDAP_GROUP_SEARCH_FILTER: { type: string }
+          MINIO_IDENTITY_LDAP_TLS_SKIP_VERIFY: { type: string }
+          MINIO_IDENTITY_LDAP_SERVER_INSECURE: { type: string }
+          MINIO_IDENTITY_LDAP_SERVER_STARTTLS: { type: string }
+          MINIO_IDENTITY_LDAP_SRV_RECORD_NAME: { type: string }
+          MINIO_IDENTITY_LDAP_COMMENT: { type: string }
+  contextSchema:
+    properties:
+      certificateIssuer:
+        required: true
+        properties:
+          internal: { type: string, required: true }
+      storageClass:
+        required: true
+        properties:
+          data: { type: string, required: true }
+  modules:
+    - name: main
+      source:
+        local:
+          path: ../charts/minio/5.4.0
+      values: |
+        minio:
+          rootUser: minio 
+          rootPassword: minio123 
+          clusterIssuer: {{ .Context.certificateIssuer.internal }}
+          tls:
+            enabled: true
+            certSecret: {{ .Release.metadata.name }}-internal-tls 
+          persistence:
+            storageClass: {{ .Context.storageClass.data }}
+            size: {{ .Parameters.storage.driveSize }}
+          drivesPerNode: {{ .Parameters.storage.drivesPerNode }}
+          replicas: {{ .Parameters.storage.replicas }}
+          pools: {{ .Parameters.storage.pools }}
+          mode: {{ if ne .Parameters.storage.replicas 1.0 }}distributed{{else}}standalone{{end}}
+          ingress:
+            enabled: {{ .Parameters.ingresses.passThrough.enabled }}
+            hosts:
+              - {{ .Parameters.ingresses.passThrough.host | default (printf "minio-%s" .Release.spec.targetNamespace) }}.{{ .Context.ingress.hostPostfix }}
+          consoleIngress:
+            enabled: {{ .Parameters.ingresses.console.enabled }}
+            annotations:
+              cert-manager.io/cluster-issuer: {{ .Context.certificateIssuer.public }}
+            {{- $hostConsole := .Parameters.ingresses.console.host | default (printf "minio-console-%s" .Release.spec.targetNamespace) }}
+            hosts:
+              - {{ $hostConsole }}.{{ .Context.ingress.hostPostfix }}
+            tls:
+              - secretName: {{ .Release.metadata.name }}-console-tls 
+                hosts:
+                  - {{ $hostConsole }}.{{ .Context.ingress.hostPostfix }}
+          secondaryIngress:
+            enabled: {{ .Parameters.ingresses.public.enabled }}
+            clusterIssuer: {{ .Context.certificateIssuer.public }}
+            host: {{ .Parameters.ingresses.public.host | default (printf "minio-public-%s" .Release.spec.targetNamespace) }}.{{ .Context.ingress.hostPostfix }}
+          clearTextIngress:
+            enabled: {{ .Parameters.ingresses.clearText.enabled }}
+            host: {{ .Parameters.ingresses.clearText.host | default (printf "minio-clear-text-%s" .Release.spec.targetNamespace) }}.{{ .Context.ingress.hostPostfix }}
+          {{- if .Parameters.vip.enabled }}
+          vip:
+            enabled: true
+            host: {{ .Parameters.vip.host }}
+            ip: {{ resolveDNS .Parameters.vip.host }}
+          {{- end }}
+          {{- with .Parameters.environment }}
+          environment:
+            {{- toYaml . | nindent 6 }}
+          {{- end }}
