@@ -1,0 +1,128 @@
+
+apiVersion: v1alpha1
+name: openldap
+tag: 4.4.3-p01
+protected: true
+schema:
+  parameters:
+    properties:
+      ldapDomain: { type: string, required: true }
+      replicaCount: { type: integer, default: 3 }
+      admin:
+        properties:
+          user: { type: string, default: admin }
+          password: { type: string, required: true }
+      config:
+        properties:
+          user: { type: string, default: admin }
+          password: { type: string, required: true }
+      adminIngressHost: { type: string, default: phpldapadmin }
+      ldapIngressHost: { type: string, default: ldap }
+      customLdifFiles:
+        type: object
+        additionalProperties: true
+        properties: {}
+  context:
+    properties:
+      ingress:
+        required: true
+        properties:
+          hostPostfix: { type: string, required: true }
+      certificateIssuer:
+        required: true
+        properties:
+          public: { type: string, required: true }
+      cluster:
+        required: true
+        properties:
+          domain: { type: string, required: true }
+modules:
+  - name: main
+    specPatch:
+      timeout: 4m
+    source:
+      local:
+        path: ../charts/openldap/4.3.3
+    values: |
+      openldap-stack-ha:
+        replicaCount: {{ default 2 .Parameters.replicaCount }}
+        replication:
+          enabled: false
+        clusterIssuer: {{ .Context.certificateIssuer.public }}
+        global:
+          ldapDomain: {{ .Parameters.ldapDomain }}
+          adminUser: {{ .Parameters.admin.user }}
+          adminPassword: {{ .Parameters.admin.password }}
+          configUser: {{ .Parameters.config.user }}
+          configPassword: {{ .Parameters.config.password }}
+        initTLSSecret:
+          tls_enabled: true
+          secret: {{ .Release.metadata.name }}-cert
+        persistence:
+          storageClass: {{ .Context.storageClass.data }}
+        phpldapadmin:
+          ingress:
+            annotations:
+              cert-manager.io/cluster-issuer: {{ .Context.certificateIssuer.public }}
+            hosts:
+              - {{ .Parameters.adminIngressHost }}.{{ .Context.ingress.hostPostfix }}
+            tls:
+              - hosts:
+                  - {{ .Parameters.adminIngressHost }}.{{ .Context.ingress.hostPostfix }}
+                secretName: phpldapadmin-tls
+        service:
+          {{ $ldap := printf "%s.%s" .Parameters.ldapIngressHost .Context.cluster.domain }}
+          annotations:
+            metallb.universe.tf/loadBalancerIPs: {{ resolveDNS $ldap }}
+          hosts:
+            - {{ $ldap }}
+        # Custom openldap configuration files used to override default settings
+        # DO NOT FORGET to put the Root Organisation object as it won't be created while using customLdifFiles
+        # To generate passwords: 'slappasswd -s myPassword' on an ldap node
+        customLdifFiles:
+          {{ toYaml .Parameters.customLdifFiles | nindent 10 }}
+dependencies:
+  - ingress
+  - certManager
+roles:
+  - openldap
+  - ldap
+usage:
+  html: |
+    {{ .Release.metadata.name }} LDAP server
+    <ul>
+    <li>
+    A console can be accessed using <a href="{{ .Parameters.adminIngressHost }}.{{ .Context.ingress.hostPostfix }}">this link</a>
+    </li>
+    <li>
+    You can access the LDAP services using the following parameters:
+    <ul>
+    <li>host: {{ printf "%s.%s" .Parameters.ldapIngressHost .Context.cluster.domain }}</li>
+    <li>port: 636 (LDAPS)</li>
+    {{- $parts := split "." .Parameters.ldapDomain }}
+    {{- $login := .Parameters.admin.user }}
+    {{- range $parts }}
+    {{- $login = printf "%s,cn=%s" $login . }}
+    {{- end }}
+    <li>login: cn={{ $login }}</li>
+    <li>Password: {{.Parameters.admin.password }}</li>
+    </ul>
+    </li>
+    </ul>
+  markdown: |
+    {{ .Release.metadata.name }} LDAP server
+
+    A console can be accessed using [this link]({{ .Parameters.adminIngressHost }}.{{ .Context.ingress.hostPostfix }})
+
+    You can access the LDAP services using the following parameters:
+    
+    - host: {{ printf "%s.%s" .Parameters.ldapIngressHost .Context.cluster.domain }}
+    - port: 636 (LDAPS)
+    {{- $parts := split "." .Parameters.ldapDomain }}
+    {{- $login := .Parameters.admin.user }}
+    {{- range $parts }}
+    {{- $login = printf "%s,cn=%s" $login . }}
+    {{- end }}
+    - login: cn={{ $login }}
+    - Password: {{.Parameters.admin.password }}
+  

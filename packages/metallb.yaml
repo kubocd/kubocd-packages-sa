@@ -1,0 +1,48 @@
+
+apiVersion: v1alpha1
+name: metallb
+tag: 0.14.9-p01
+protected: true
+schema:
+  context:
+    properties:
+      cluster:
+        required: true
+        properties:
+          domain: { type: string, required: true }
+modules:
+  - name: main
+    specPatch:
+      timeout: 4m
+    source:
+      helmRepository:
+        url: https://metallb.github.io/metallb
+        chart: metallb
+        version: 0.14.9
+    values: |
+      controller:
+        image:
+          {{ $redirection := imageRedirect "quay.io/metallb/controller" . }}
+          repository: {{ $redirection.repository }}
+      speaker:
+        image:
+          {{ $redirection := imageRedirect "quay.io/metallb/speaker" . }}
+          repository: {{ $redirection.repository }}
+        frr:
+          image:
+            {{ $redirection := imageRedirect "quay.io/frrouting/frr" . }}
+            repository: {{ $redirection.repository }}
+  - name: pool
+    specPatch:
+      timeout: 2m
+    source:
+      local:
+        path: ../charts/metallb-pool/0.1.0
+    values: |
+      ipRanges:
+        - first: {{ resolveDNS (printf "first.pool.%s" .Context.cluster.domain) }}
+          last: {{ resolveDNS (printf "last.pool.%s" .Context.cluster.domain) }}
+    dependsOn:
+      - main
+roles:
+  - loadBalancer

@@ -1,0 +1,24 @@
+
+
+apiVersion: v1alpha1
+name: cnpg
+tag: 0.23.2-p01
+description: |
+  CloudNativePG is the Kubernetes operator that covers the full lifecycle of a highly available PostgresSQL 
+  database cluster with a primary/standby architecture, using native streaming replication.
+protected: true
+modules:
+  - name: main
+    specPatch:
+      timeout: 2m
+    source:
+      helmRepository:
+        url: https://cloudnative-pg.github.io/charts
+        chart: cloudnative-pg
+        version: 0.23.2
+    values: |
+      image:
+        {{ $redirection := imageRedirect "ghcr.io/cloudnative-pg/cloudnative-pg" . }}
+        repository: {{ $redirection.repository }}
+roles:
+  - pgOperator

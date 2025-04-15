@@ -1,0 +1,56 @@
+
+apiVersion: v1alpha1
+name: stack1
+tag: 0.1.0
+description: |
+  A test stack with redis and podinfo
+schema:
+  parameters:
+    properties:
+      tls: { type: boolean, default: false }
+      redis:
+        properties:
+          replicaCount: { type: integer, default: 1 }
+modules:
+  - name: main
+    source:
+      local:
+        path: ../charts/wrapper/1.0.0
+    values:
+      body: |
+        ---
+        apiVersion: v1
+        kind: Namespace
+        metadata:
+          name: {{ .Release.spec.targetNamespace }}
+        ---
+        apiVersion: kubocd.kubotal.io/v1alpha1
+        kind: Release
+        metadata:
+          name: redis
+          namespace: {{ .Release.spec.targetNamespace }}
+        spec:
+          description: "redis instance of {{ .Release.metadata.name }}"
+          parameters:
+            redis:
+              replicaCount: {{ .Parameters.redis.replicaCount }}
+            commander:
+              tls: {{ .Parameters.tls }}
+          package:
+            repository: quay.io/kubocd/packages/redis
+            tag: 20.6.1-p01
+            interval: 30m
+        ---
+        apiVersion: kubocd.kubotal.io/v1alpha1
+        kind: Release
+        metadata:
+          name: podinfo
+          namespace: {{ .Release.spec.targetNamespace }}
+        spec:
+          description: "podinfo instance of {{ .Release.metadata.name }}"
+          package:
+            repository: quay.io/kubocd/packages/podinfo
+            tag: 6.7.1-p01
+            interval: 30m
+          parameters:
+            tls: {{ .Parameters.tls }}
