@@ -2,7 +2,7 @@
 
 apiVersion: v1alpha1
 name: kubocd-webhooks
-tag: v0.2.0-snapshot-p01
+tag: v0.2.1-p01
 protected: true
 description: |
   Second stage of kubocd deployment.
@@ -12,12 +12,10 @@ schema:
       replicaCount: { type: integer, default: 2 }
 modules:
   - name: main
-    specPatch:
-      timeout: 2m
     source:
       oci:
         repository: quay.io/kubocd/charts/kubocd-wh
-        tag: v0.2.0-snapshot
+        tag: v0.2.1
     values: |
       image:
         {{ $redirection := imageRedirect "quay.io/kubocd/kubocd" . }}

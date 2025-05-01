@@ -8,7 +8,7 @@ templateHeader: |
   {{- $uiHost :=  .Parameters.commander.host | default (printf "%s-%s-ui" .Release.metadata.name .Release.metadata.namespace) -}}
 usage:
   text: |
-    Redis UI can be accessed using {{if .Parameters.commander.tls}}https{{else}}http{{end}}://{{ $uiHost }}.{{.Context.ingress.hostPostfix}}
+    Redis UI can be accessed using {{if .Parameters.commander.tls}}https{{else}}http{{end}}://{{ $uiHost }}.{{.Context.ingress.domain}}
 schema:
   parameters:
     description: Redis stack
@@ -31,11 +31,9 @@ schema:
         properties:
           className: { type: string, default: "nginx"}
           clusterIssuer: { type: string }
-          hostPostfix: { type: string, required: true }
+          domain: { type: string, required: true }
 modules:
   - name: redis
-    specPatch:
-      timeout: 2m
     source:
       oci:
         repository: registry-1.docker.io/bitnamicharts/redis
@@ -60,8 +58,6 @@ modules:
         repository: {{ $redirection.baseRepository }}
         pullPolicy: {{ $redirection.imagePullPolicy | default "IfNotPresent" }}
   - name: commander
-    specPatch:
-      timeout: 2m
     enabled: "{{ .Parameters.commander.enabled }}"
     source:
       git:
@@ -85,14 +81,14 @@ modules:
           cert-manager.io/cluster-issuer: {{ required ".Context.certificateIssuer.public must be defined if tls: true" .Context.certificateIssuer.public }}
         {{- end }}
         hosts:
-          - host: {{ $uiHost }}.{{.Context.ingress.hostPostfix}}
+          - host: {{ $uiHost }}.{{.Context.ingress.domain}}
             paths:
               - "/"
         {{- if .Parameters.commander.tls }}
         tls:
           - secretName: {{ .Release.metadata.name }}-tls
             hosts:
-              - {{ $uiHost }}.{{.Context.ingress.hostPostfix}}
+              - {{ $uiHost }}.{{.Context.ingress.domain}}
         {{- end }}
     dependsOn:
       - redis

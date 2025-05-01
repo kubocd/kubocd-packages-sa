@@ -14,20 +14,18 @@ schema:
         required: true
         properties:
           className: { type: string, default: "nginx"}
-          hostPostfix: { type: string, required: true }
+          domain: { type: string, required: true }
 templateHeader: |
   {{- $uiHost := .Parameters.host | default (printf "%s-%s" .Release.metadata.name .Release.metadata.namespace) -}}
 description: |
   A sample application on {{ $uiHost }}
 usage:
   text: |
-    Podinfo can be accessed using {{if .Parameters.tls}}https{{else}}http{{end}}://{{ $uiHost }}.{{ .Context.ingress.hostPostfix }}
+    Podinfo can be accessed using {{if .Parameters.tls}}https{{else}}http{{end}}://{{ $uiHost }}.{{ .Context.ingress.domain }}
   html: |
-    Podinfo can be accessed using <a href="{{if .Parameters.tls}}https{{else}}http{{end}}://{{ $uiHost }}.{{ .Context.ingress.hostPostfix }}">this link</a>
+    Podinfo can be accessed using <a href="{{if .Parameters.tls}}https{{else}}http{{end}}://{{ $uiHost }}.{{ .Context.ingress.domain }}">this link</a>
 modules:
   - name: main
-    specPatch:
-      timeout: 2m
     source:
       helmRepository:
         url: https://stefanprodan.github.io/podinfo
@@ -42,7 +40,7 @@ modules:
           cert-manager.io/cluster-issuer: {{ required ".Context.certificateIssuer.public must be defined if tls: true" .Context.certificateIssuer.public }}
         {{- end }}
         hosts:
-          - host: {{ $uiHost }}.{{ .Context.ingress.hostPostfix }}
+          - host: {{ $uiHost }}.{{ .Context.ingress.domain }}
             paths:
               - path: /
                 pathType: ImplementationSpecific
@@ -50,7 +48,7 @@ modules:
         tls:
           - secretName: {{ .Release.metadata.name }}-tls
             hosts:
-              - {{ $uiHost }}.{{ .Context.ingress.hostPostfix }}
+              - {{ $uiHost }}.{{ .Context.ingress.domain }}
         {{- end }}
       {{- $redirection := imageRedirect "ghcr.io/stefanprodan/podinfo:6.7.1" . }}
       image: 

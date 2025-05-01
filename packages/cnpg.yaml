@@ -9,8 +9,6 @@ description: |
 protected: true
 modules:
   - name: main
-    specPatch:
-      timeout: 2m
     source:
       helmRepository:
         url: https://cloudnative-pg.github.io/charts

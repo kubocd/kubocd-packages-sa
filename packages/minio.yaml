@@ -63,13 +63,15 @@ schema:
         required: true
         properties:
           data: { type: string, required: true }
+      ingress:
+        required: true
+        properties:
+          domain: { type: string, required: true }
 modules:
   - name: main
     source:
       local:
         path: ../charts/minio/5.4.0
-    specPatch:
-      timeout: 2m
     values: |
       minio:
         rootUser: minio 
@@ -88,25 +90,25 @@ modules:
         ingress:
           enabled: {{ .Parameters.ingresses.passThrough.enabled }}
           hosts:
-            - {{ .Parameters.ingresses.passThrough.host | default (printf "minio-%s" .Release.spec.targetNamespace) }}.{{ .Context.ingress.hostPostfix }}
+            - {{ .Parameters.ingresses.passThrough.host | default (printf "minio-%s" .Release.spec.targetNamespace) }}.{{ .Context.ingress.domain }}
         consoleIngress:
           enabled: {{ .Parameters.ingresses.console.enabled }}
           annotations:
             cert-manager.io/cluster-issuer: {{ .Context.certificateIssuer.public }}
           {{- $hostConsole := .Parameters.ingresses.console.host | default (printf "minio-console-%s" .Release.spec.targetNamespace) }}
           hosts:
-            - {{ $hostConsole }}.{{ .Context.ingress.hostPostfix }}
+            - {{ $hostConsole }}.{{ .Context.ingress.domain }}
           tls:
             - secretName: {{ .Release.metadata.name }}-console-tls 
               hosts:
-                - {{ $hostConsole }}.{{ .Context.ingress.hostPostfix }}
+                - {{ $hostConsole }}.{{ .Context.ingress.domain }}
         secondaryIngress:
           enabled: {{ .Parameters.ingresses.public.enabled }}
           clusterIssuer: {{ .Context.certificateIssuer.public }}
-          host: {{ .Parameters.ingresses.public.host | default (printf "minio-public-%s" .Release.spec.targetNamespace) }}.{{ .Context.ingress.hostPostfix }}
+          host: {{ .Parameters.ingresses.public.host | default (printf "minio-public-%s" .Release.spec.targetNamespace) }}.{{ .Context.ingress.domain }}
         clearTextIngress:
           enabled: {{ .Parameters.ingresses.clearText.enabled }}
-          host: {{ .Parameters.ingresses.clearText.host | default (printf "minio-clear-text-%s" .Release.spec.targetNamespace) }}.{{ .Context.ingress.hostPostfix }}
+          host: {{ .Parameters.ingresses.clearText.host | default (printf "minio-clear-text-%s" .Release.spec.targetNamespace) }}.{{ .Context.ingress.domain }}
         {{- if .Parameters.vip.enabled }}
         vip:
           enabled: true

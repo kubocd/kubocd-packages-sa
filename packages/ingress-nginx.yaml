@@ -10,11 +10,10 @@ schema:
       ingress:
         required: true
         properties:
-          hostPostfix: { type: string, required: true}
+          domain: { type: string, required: true}
 modules:
   - name: main
-    specPatch:
-      timeout: 4m
+    timeout: 4m
     source:
       helmRepository:
         url: https://kubernetes.github.io/ingress-nginx
@@ -24,7 +23,7 @@ modules:
       controller:
         service:
           annotations:
-            metallb.universe.tf/loadBalancerIPs: {{ resolveDNS .Context.ingress.hostPostfix }}
+            metallb.universe.tf/loadBalancerIPs: {{ resolveDNS .Context.ingress.domain }}
             metallb.universe.tf/allow-shared-ip: "ingress"
         extraArgs:
           enable-ssl-passthrough: true
