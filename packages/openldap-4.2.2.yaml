@@ -1,13 +1,13 @@
 
 apiVersion: v1alpha1
 name: openldap
-tag: 4.4.3-p01
+tag: 4.2.2-p01
 protected: true
 schema:
   parameters:
     properties:
       ldapDomain: { type: string, required: true }
-      replicaCount: { type: integer, default: 3 }
+      replicaCount: { type: integer, default: 2 }
       admin:
         properties:
           user: { type: string, default: admin }
@@ -41,12 +41,12 @@ modules:
     timeout: 4m
     source:
       local:
-        path: ../charts/openldap/4.3.3
+        path: ../charts/openldap/4.2.2
     values: |
       openldap-stack-ha:
-        replicaCount: {{ default 2 .Parameters.replicaCount }}
+        replicaCount: {{ .Parameters.replicaCount }}
         replication:
-          enabled: false
+          enabled: {{ if ne .Parameters.replicaCount 1.0 }}true{{else}}false{{end}}
         clusterIssuer: {{ .Context.certificateIssuer.public }}
         global:
           ldapDomain: {{ .Parameters.ldapDomain }}
