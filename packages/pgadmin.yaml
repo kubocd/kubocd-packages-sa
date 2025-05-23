@@ -1,0 +1,56 @@
+
+# https://github.com/rowanruseler/helm-charts/tree/main/charts/pgadmin4
+apiVersion: v1alpha1
+name: pgadmin
+tag: 1.44.0-p01
+description: pgAdmin 4 is a web based administration tool for the PostgreSQL database
+schema:
+  parameters:
+    properties:
+      host: { type: string, default: "pgadmin" }
+      tls: { type: boolean, default: true }
+      user: { type: string, default: "pgadmin@pgadmin.com" }
+      password: { type: string, default: "pgadmin123" }
+  context:
+    properties:
+      certificateIssuer:
+        required: true
+        properties:
+          internal: { type: string, required: true }
+      ingress:
+        required: true
+        properties:
+          domain: { type: string, required: true }
+
+modules:
+  - name: main
+    source:
+      helmRepository:
+        url: https://helm.runix.net
+        chart: pgadmin4
+        version: 1.44.0
+    values: |
+      image:
+        {{ $redirection := imageRedirect "dpage/pgadmin4" . }}
+        repository: {{ $redirection.repository }}
+      ingress:
+        enabled: true
+        ingressClassName: nginx
+        {{- if .Parameters.tls }}
+        annotations:
+          cert-manager.io/cluster-issuer: {{ required ".Context.certificateIssuer.public must be defined if tls: true" .Context.certificateIssuer.public }}
+        {{- end }}
+        hosts:
+          - host: {{ .Parameters.host }}.{{ .Context.ingress.domain }}
+            paths:
+              - path: /
+                pathType: Prefix
+        {{- if .Parameters.tls }}
+        tls:
+          - secretName: {{ .Release.metadata.name }}-tls
+            hosts:
+              - {{ .Parameters.host }}.{{ .Context.ingress.domain }}
+        {{- end }}
+      env:
+        email: {{ .Parameters.user }}
+        password: {{.Parameters.password }}  
