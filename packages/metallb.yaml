@@ -6,10 +6,19 @@ protected: true
 schema:
   context:
     properties:
+      # One of cluster.domain or metallb.pool must be defined. If both, metallb pool take precedence
       cluster:
-        required: true
+        required: false
         properties:
           domain: { type: string, required: true }
+      loadBalancer:
+        required: false
+        properties:
+          pool:
+            required: true
+            properties:
+              first: { type: string, required: true }
+              last: { type: string, required: true }
 modules:
   - name: main
     timeout: 4m
@@ -36,9 +45,17 @@ modules:
       local:
         path: ../charts/metallb-pool/0.1.0
     values: |
+      {{- if .Context.loadBalancer }}
       ipRanges:
-        - first: {{ resolveDNS (printf "first.pool.%s" .Context.cluster.domain) }}
-          last: {{ resolveDNS (printf "last.pool.%s" .Context.cluster.domain) }}
+        - first: {{ resolveDNS (.Context.loadBalancer.pool.first) }}
+          last:  {{ resolveDNS (.Context.loadBalancer.pool.last) }}
+      {{- else if .Context.cluster }}
+      ipRanges:
+        - first: {{ resolveDNS ( printf "first.pool.%s" .Context.cluster.domain ) }}
+          last:  {{ resolveDNS ( printf "last.pool.%s" .Context.cluster.domain ) }}
+      {{- else }}
+        {{ fail "At least one of .Context.metallb.pool or .Context.cluster.domain must be defined" }} 
+      {{- end }}
     dependsOn:
       - main
 roles:

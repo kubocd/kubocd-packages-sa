@@ -10,7 +10,13 @@ schema:
       ingress:
         required: true
         properties:
-          domain: { type: string, required: true}
+          # At least, one of domain and vip must be defined. vip take precedence.
+          # Vip is a workaround for the case domain does not resolve internally.
+          domain: { type: string }
+          vip: { type: string }
+          kubernetes:
+            properties:
+              enabled: { type: boolean, default: false }
 modules:
   - name: main
     timeout: 4m
@@ -23,7 +29,7 @@ modules:
       controller:
         service:
           annotations:
-            metallb.universe.tf/loadBalancerIPs: {{ resolveDNS .Context.ingress.domain }}
+            metallb.universe.tf/loadBalancerIPs: {{ resolveDNS (.Context.ingress.vip | default .Context.ingress.domain) }}
             metallb.universe.tf/allow-shared-ip: "ingress"
         extraArgs:
           enable-ssl-passthrough: true
@@ -48,6 +54,35 @@ modules:
           {{ $redirection := imageRedirect "registry.k8s.io/defaultbackend-amd64" . }}
           image: {{ $redirection.baseRepository }}
           # image: defaultbackend-amd64
+  - name: kubernetes
+    enabled: "{{ dig \"ingress\" \"kubernetes\" \"enabled\" false .Context }}"
+    source:
+      local:
+        path: ../charts/wrapper/1.0.0
+    dependsOn:
+    - main
+    values:
+      body: |
+        apiVersion: networking.k8s.io/v1
+        kind: Ingress
+        metadata:
+          name: kubernetes
+          namespace: default
+          annotations:
+            nginx.ingress.kubernetes.io/ssl-passthrough: "true"
+        spec:
+          rules:
+            - host: kubernetes.{{ .Context.ingress.domain }}
+              http:
+                paths:
+                  - path: /
+                    pathType: Prefix
+                    backend:
+                      service:
+                        name: kubernetes
+                        port:
+                          number: 443
+          ingressClassName: nginx
 dependencies:
   - loadBalancer
 roles:
