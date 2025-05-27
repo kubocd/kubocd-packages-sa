@@ -33,16 +33,15 @@ modules:
             metallb.universe.tf/allow-shared-ip: "ingress"
         extraArgs:
           enable-ssl-passthrough: true
+        image:
+          {{ $redirection := imageRedirect "registry.k8s.io/ingress-nginx/controller" . }}
+          image: {{ $redirection.baseRepository }}
+          # image: ingress-nginx/controller
       global:
         image:
           {{ $redirection := imageRedirect "registry.k8s.io/ingress-nginx" . }}        
           registry: {{ $redirection.registry }}
           # registry: registry.k8s.io
-      controller:
-        image:
-          {{ $redirection := imageRedirect "registry.k8s.io/ingress-nginx/controller" . }}
-          image: {{ $redirection.baseRepository }}
-          # image: ingress-nginx/controller
       admissionWebhooks:
         patch:
           image:
