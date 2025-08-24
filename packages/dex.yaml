@@ -1,0 +1,88 @@
+
+apiVersion: v1alpha1
+name: dex
+tag: 0.23.0-p01
+schema:
+  parameters:
+    properties:
+      host: { type: string, required: true }
+      logger:
+        properties:
+          level: { type: string, default: "INFO" }
+      clients:
+        required: true
+        minItems: 1
+        items:
+          properties:
+            id: { type: string, required: true}
+            secret: { type: string, required: true}
+            name: { type: string, required: true}
+            redirectUrl: { type: string, required: true}
+  context:
+    properties:
+      ingress:
+        required: true
+        properties:
+          className: { type: string, default: "nginx"}
+          domain: { type: string, required: true }
+      certificateIssuer:
+        required: true
+        properties:
+          public: { type: string, required: true }
+      dex:
+        required: true
+        properties:
+          connectors:
+            required: true
+            minItems: 1
+            items:
+              properties: {}
+
+modules:
+  - name: main
+    source:
+      helmRepository:
+        url: https://charts.dexidp.io
+        chart: dex
+        version: 0.23.0
+    values: |
+      ingress:
+        enabled: true
+        className: {{ .Context.ingress.className }}
+        annotations:
+          cert-manager.io/cluster-issuer: {{ .Context.certificateIssuer.public }}
+        hosts:
+          - host: {{ .Parameters.host }}.{{ .Context.ingress.domain }}
+            paths:
+              - path: /
+                pathType: ImplementationSpecific
+        tls:
+          - secretName: {{ .Release.metadata.name }}-tls
+            hosts:
+              - {{ .Parameters.host}}.{{ .Context.ingress.domain }}
+      config:
+        issuer: https://{{ .Parameters.host }}.{{ .Context.ingress.domain }}/dex
+        web:
+          http: 0.0.0.0:5556
+        logger:
+          level: {{ .Parameters.logger.level }}
+        oauth2:
+          skipApprovalScreen: true
+        storage:
+          type: kubernetes
+          config:
+            inCluster: true
+        connectors:
+          {{- toYaml .Context.dex.connectors | nindent 12 }}
+        staticClients:
+        {{- range .Parameters.clients }}
+        - id: {{ .id }}
+          secret: {{ .secret }}
+          name: {{ .name }}
+          redirectURIs:
+            - {{ .redirectUrl }}
+        {{ end }}
+dependencies:
+  - ingress
+  - certManager
+  - ldap

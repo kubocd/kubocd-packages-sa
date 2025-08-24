@@ -1,0 +1,68 @@
+
+
+apiVersion: v1alpha1
+name: weboidc
+tag: 0.1.0-p01
+schema:
+  parameters:
+    properties:
+      name: { type: string, default: WEBOIDC }
+      logger:
+        properties:
+          mode: { type: string, default: dev, enum: [ "dev", "json"] }
+          level: { type: string, default: info, enum: [ "error", "info", "debug", "trace"] }
+      host: { type: string, required: true }
+      tls: { type: boolean, default: false }
+      oidc:
+        required: true
+        properties:
+          clientId: { type: string, required: true }
+          clientSecret: { type: string, required: true }
+  context:
+    properties:
+      ingress:
+        required: true
+        properties:
+          className: { type: string, default: "nginx"}
+          domain: { type: string, required: true }
+      oidc:
+        required: true
+        properties:
+          issuerURL: { type: string, required: true }
+      networkPolicies: { type: boolean, required: true }
+modules:
+  - name: main
+    source:
+      oci:
+        repository: quay.io/kuboauth/charts/weboidc
+        tag: 0.1.0-snapshot
+    values: |
+      name: {{ .Parameters.name }}
+      log:
+        mode: {{ .Parameters.logger.mode }}
+        level: {{ .Parameters.logger.level  }}
+      ingress:
+        enabled: true
+        class: {{ .Context.ingress.className }}
+        host: {{ .Parameters.host}}.{{.Context.ingress.domain}}
+        networkPolicy:
+          enabled: {{ .Context.networkPolicies}}
+      server:
+        certificateIssuer: {{ .Context.certificateIssuer.public }}
+      oidc:
+        clientId:
+          value: {{ .Parameters.oidc.clientId }}
+        clientSecret:
+          value: {{ .Parameters.oidc.clientSecret }}
+        issuerUrl: {{ .Context.oidc.issuerURL}}
+        scopes:
+          - profile
+          - groups
+          - email
+        ca:
+          secret:
+            name: certs-bundle
+            key: ca.crt
+#dependencies:
+#  - oidc
+
