@@ -29,6 +29,10 @@ schema:
         required: true
         properties:
           issuerURL: { type: string, required: true }
+      certificateIssuer:
+        required: true
+        properties:
+          public: { type: string, required: true }
       networkPolicies: { type: boolean, required: true }
 modules:
   - name: main
@@ -63,6 +67,6 @@ modules:
           secret:
             name: certs-bundle
             key: ca.crt
-#dependencies:
-#  - oidc
+dependencies:
+  - oidc
 
