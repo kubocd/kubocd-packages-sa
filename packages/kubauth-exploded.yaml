@@ -89,6 +89,7 @@ modules:
           tls: true
           service:
             enabled: true
+          bindAddr: "0.0.0.0"
         ingress:
           enabled: {{ .Parameters.userdb.ingress.enabled }}
           host: {{ .Parameters.userdb.ingress.host}}.{{.Context.ingress.domain}}
