@@ -61,6 +61,7 @@ modules:
         issuerUrl: {{ .Context.oidc.issuerURL}}
         scopes:
           - profile
+          - openid
           - groups
           - email
         ca:
