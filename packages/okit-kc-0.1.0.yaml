@@ -1,0 +1,78 @@
+
+
+apiVersion: v1alpha1
+name: okit-kc
+tag: 0.1.0-p01
+schema:
+  parameters:
+    properties:
+      replicaCount: { type: integer, default: 1 }
+      logger:
+        properties:
+          mode: { type: string, default: json, enum: [ "text", "json"] }
+          level: { type: string, default: info, enum: [ "error", "info", "debug", "trace"] }
+      host: { type: string, default: "okit" }
+      tls: { type: boolean, default: true }
+      oidc:
+        required: true
+        properties:
+          clientId: { type:  string, required: true }
+          clientSecret: { type:  string, required: true }
+  context:
+    properties:
+      certificateIssuer:
+        required: true
+        properties:
+          public: { type: string, required: true }
+      networkPolicies: { type: boolean, required: true }
+      ingress:
+        required: true
+        properties:
+          className: { type: string, default: "nginx"}
+          domain: { type: string, required: true }
+      cluster:
+        required: true
+        properties:
+          name: { type: string, required: true }
+          apiServerURL: { type: string, required: true }
+      oidc:
+        required: true
+        properties:
+          issuerURL: { type: string, required: true }
+      namespace: { type: string, required: false, description: "Will be default namespace for logged users" }
+modules:
+  - name: kubeconfig
+    source:
+      oci:
+        repository: quay.io/kubauth/charts/okit-kc
+        tag: 0.1.0-snapshot
+    values: |
+      replicaCount: {{ .Parameters.replicaCount }}
+      logger:
+        mode: {{ .Parameters.logger.mode }}
+        level: {{ .Parameters.logger.level }}
+      ingress:
+        host: {{ .Parameters.host }}.{{ .Context.ingress.domain }}
+      server:
+        tls: {{ .Parameters.tls }}
+        certificateIssuer: {{ .Context.certificateIssuer.public }}
+      networkPolicies:
+        enabled: {{ .Context.networkPolicies }}
+      kubeconfigs:
+        - name: default
+          kubeconfig:
+            description: Default OIDC client configuration
+            cluster:
+              apiServerUrl: {{ .Context.cluster.apiServerURL }}
+              rootCaData: # Will be fulfilled by server
+              insecureSkipVerify: false
+            context:
+              name: oidc-{{ .Context.cluster.name }}
+              namespace: {{ .Parameters.namespace }}
+            oidc:
+              issuerUrl: {{ .Context.oidc.issuerURL }}
+              issuerCaData: # Will be fulfilled by server
+              insecureSkipVerify: false
+              clientId: {{ .Parameters.oidc.clientId }}
+              clientSecret: {{ .Parameters.oidc.clientSecret }}
+
