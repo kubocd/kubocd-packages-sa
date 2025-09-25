@@ -1,0 +1,109 @@
+
+
+apiVersion: v1alpha1
+name: okit
+tag: 0.1.0-p01
+schema:
+  parameters:
+    properties:
+      logger:
+        properties:
+          mode: { type: string, default: json, enum: [ "text", "json"] }
+          level: { type: string, default: info, enum: [ "error", "info", "debug", "trace"] }
+      oidc:
+        properties:
+          clientId: { type:  string, default: "k8s" }
+          clientSecret: { type:  string, required: false }
+          usernamePrefix: { type: string, default: "-" }
+          groupsPrefix: { type: string, default: "-" }
+      kubeconfig:
+        properties:
+          enabled: { type: boolean, default: true }
+          replicaCount: { type: integer, default: 1 }
+          host: { type: string, default: "okit" }
+          tls: { type: boolean, default: true }
+          namespace: { type: string, required: false, description: "Will be default namespace for logged users" }
+      apiserver:
+        properties:
+          enabled: { type: boolean, default: true }
+          timeoutApiServerDown: { type: string, default: "30s" }
+          timeoutApiServerUp: { type: string, default: "4m" }
+
+  context:
+    properties:
+      certificateIssuer:
+        required: true
+        properties:
+          public: { type: string, required: true }
+      networkPolicies: { type: boolean, required: true }
+      ingress:
+        required: true
+        properties:
+          className: { type: string, default: "nginx"}
+          domain: { type: string, required: true }
+      cluster:
+        required: true
+        properties:
+          name: { type: string, required: true }
+          apiServerURL: { type: string, required: true }
+      oidc:
+        required: true
+        properties:
+          issuerURL: { type: string, required: true }
+          issuerCaSecretName: { type: string, default: "certs-bundle"}
+          issuerCaName: { type: string, default: "ca.crt"}
+          clientId: { type: string, default: "k8s" }
+          clientSecret: { type: string, required: false }
+
+modules:
+  - name: apiserver
+    enabled: "{{ .Parameters.apiserver.enabled }}"
+    source:
+      oci:
+        repository: quay.io/kubauth/charts/okit-ac
+        tag: 0.1.0-snapshot
+    values: |
+      config:
+        timeoutApiServerDown: {{ .Parameters.apiserver.timeoutApiServerDown }}
+        timeoutApiServerUp: {{ .Parameters.apiserver.timeoutApiServerUp }}
+        oidc:
+          issuerURL: "{{ .Context.oidc.issuerURL }}"
+          issuerCaSecretName: {{ .Context.oidc.issuerCaSecretName }}
+          issuerCaName: {{ .Context.oidc.issuerCaName }}
+          clientId: {{ .Context.oidc.clientId }}
+          usernamePrefix: "{{ .Parameters.oidc.usernamePrefix }}"
+          groupsPrefix: "{{ .Parameters.oidc.groupsPrefix }}"
+  - name: kubeconfig
+    enabled: "{{ .Parameters.kubeconfig.enabled }}"
+    source:
+      oci:
+        repository: quay.io/kubauth/charts/okit-kc
+        tag: 0.1.0-snapshot
+    values: |
+      replicaCount: {{ .Parameters.kubeconfig.replicaCount }}
+      logger:
+        mode: {{ .Parameters.logger.mode }}
+        level: {{ .Parameters.logger.level }}
+      ingress:
+        host: {{ .Parameters.kubeconfig.host }}.{{ .Context.ingress.domain }}
+      server:
+        tls: {{ .Parameters.kubeconfig.tls }}
+        certificateIssuer: {{ .Context.certificateIssuer.public }}
+      networkPolicies:
+        enabled: {{ .Context.networkPolicies }}
+      kubeconfigs:
+        default:
+          description: Default OIDC client configuration
+          cluster:
+            apiServerURL: "{{ .Context.cluster.apiServerURL }}"
+          context:
+            name: oidc-{{ .Context.cluster.name }}
+            namespace: {{ .Parameters.kubeconfig.namespace }}
+          oidc:
+            issuerURL: "{{ .Context.oidc.issuerURL }}"
+            issuerCaSecretName: {{ .Context.oidc.issuerCaSecretName }}
+            issuerCaName: {{ .Context.oidc.issuerCaName }}
+            clientId: {{ .Context.oidc.clientId }}
+            clientSecret: {{ .Context.oidc.clientSecret }}
+    dependsOn:
+      - apiserver
