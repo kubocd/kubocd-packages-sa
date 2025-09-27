@@ -1,0 +1,21 @@
+
+apiVersion: v1alpha1
+name: wrapper
+tag: 0.1.0-p01
+description: A package to embed whatever manifest
+schema:
+  parameters:
+    properties:
+      content: { type: string }
+      tls: { type: boolean, default: false }
+      redis:
+        properties:
+          replicaCount: { type: integer, default: 1 }
+modules:
+  - name: main
+    source:
+      local:
+        path: ../charts/wrapper/1.0.0
+    values:
+      body: |+
+        {{- .Parameters.content | nindent 6 }}

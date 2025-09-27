@@ -1,0 +1,111 @@
+
+apiVersion: v1alpha1
+name: kubauth-grant
+tag: 0.1.1-p01
+schema:
+  parameters:
+    properties:
+      namespaces:
+        properties:
+          kubauth:
+            properties:
+              users: { type: string, default: "kubauth-users" }
+              oidcClients: { type: string, default: "kubauth-oidc" }
+      users:
+        items:
+          properties:
+            login: { type: string, required: true }
+            commonNames: { items: { type: string } }
+            emails: { items: { type: string, pattern: "^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$" } }
+            passwordHash: { type: string }
+            uid: { type: integer }
+            comment: { type: string }
+            claims: { type: object, additionalProperties: true, properties: {} }
+            disabled: { type: boolean }
+      groupBindings:
+        items:
+          properties:
+            user: { type: string, required: true }
+            group: { type: string, required: true }
+      groups:
+        items:
+          properties:
+            name: { type: string, required: true }
+            comment: { type: string }
+            claims: { type: object, additionalProperties: true, properties: {} }
+      roleBindings:
+        items:
+          properties:
+            name: { type: string, required: true }
+            role: { type: string }
+            clusterRole: { type: string }
+            namespace: { type: string, required: true }
+            users: { items: { type: string } }
+            groups: { items: { type: string } }
+      clusterRoleBindings:
+        items:
+          properties:
+            name: { type: string, required: true }
+            clusterRole: { type: string }
+            users: { items: { type: string } }
+            groups: { items: { type: string } }
+      oidcClients:
+        items:
+          properties:
+            name: { type: string, required: true }
+            hashedSecret: { type: string }
+            redirectURIs:
+              required: true
+              items:
+                type: string
+                pattern: '^(https?:\/\/)?(localhost|((25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(25[0-5]|2[0-4]\d|1?\d?\d)|\[[0-9A-Fa-f:.]+\]|([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,})(:[0-9]{1,5})?(\/\S*)?$'
+            grantTypes: { items: { type: string }, required: true }
+            responseTypes: { items: { type: string }, required: true }
+            scopes: { items: { type: string }, required: true }
+            public: { type: boolean }
+            audiences: { items: { type: string } }
+            forceOpenIdScope: { type: boolean }
+            postLogoutURL: { type: string }
+            displayName: { type: string }
+            description: { type: string }
+            entryURL:
+              type: string
+              pattern: '^(https?:\/\/)?(localhost|((25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(25[0-5]|2[0-4]\d|1?\d?\d)|\[[0-9A-Fa-f:.]+\]|([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,})(:[0-9]{1,5})?(\/\S*)?$'
+            accessTokenLifespan: { type: string }
+            refreshTokenLifespan: { type: string }
+            idTokenLifespan: { type: string }
+modules:
+  - name: main
+    source:
+      oci:
+        repository: quay.io/kubauth/charts/kubauth-grant
+        tag: 0.1.1-snapshot
+    values: |
+      namespaces:
+        kubauth:
+          users: {{ .Parameters.namespaces.kubauth.users }}
+          oidcClients: {{ .Parameters.namespaces.kubauth.oidcClients }}
+      {{- with .Parameters.users }}
+      users:
+        {{- toYaml . | nindent 6 }}
+      {{- end }}
+      {{- with .Parameters.groupBindings }}
+      groupBindings:
+        {{- toYaml . | nindent 6 }}
+      {{- end }}
+      {{- with .Parameters.groups }}
+      groups:
+        {{- toYaml . | nindent 6 }}
+      {{- end }}
+      {{- with .Parameters.roleBindings }}
+      roleBindings:
+        {{- toYaml . | nindent 6 }}
+      {{- end }}
+      {{- with .Parameters.clusterRoleBindings }}
+      clusterRoleBindings:
+        {{- toYaml . | nindent 6 }}
+      {{- end }}
+      {{- with .Parameters.oidcClients }}
+      oidcClients:
+        {{- toYaml . | nindent 6 }}
+      {{- end }}

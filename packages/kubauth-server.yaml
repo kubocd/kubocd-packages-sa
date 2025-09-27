@@ -1,0 +1,79 @@
+
+
+apiVersion: v1alpha1
+name: kubauth-server
+tag: 0.1.1-p01
+schema:
+  parameters:
+    properties:
+      replicaCount: { type: integer, default: 1 }
+      userdb:
+        properties:
+          logger:
+            properties:
+              mode: { type: string, default: text, enum: [ "text", "json"] }
+              level: { type: string, default: info, enum: [ "error", "info", "debug", "trace"] }
+      oidc:
+        properties:
+          logger:
+            properties:
+              mode: { type: string, default: text, enum: [ "text", "json"] }
+              level: { type: string, default: info, enum: [ "error", "info", "debug", "trace"] }
+          ingress:
+            properties:
+              host: { type: string, default: kubauth }
+          sso:
+            properties:
+              sticky: { type: boolean, default: false }
+          allowPasswordGrant: { type: boolean, default: false }
+          enforcePKCE: { type: boolean, default: false }
+  context:
+    properties:
+      certificateIssuer:
+        required: true
+        properties:
+          public: { type: string, required: true }
+      networkPolicies: { type: boolean, required: true }
+      ingress:
+        required: false
+        properties:
+          className: { type: string, default: "nginx"}
+          domain: { type: string, required: true }
+modules:
+  - name: main
+    source:
+      oci:
+        repository: quay.io/kubauth/charts/kubauth
+        tag: 0.1.1-snapshot
+    values: |
+      replicaCount: {{ .Parameters.replicaCount }}
+      userdb:
+        enabled: true
+        logger:
+          mode: {{ .Parameters.userdb.logger.mode }}
+          level: {{ .Parameters.userdb.logger.level  }}
+        networkPolicies:
+          enabled: {{ .Context.networkPolicies}}
+      oidc:
+        enabled: true
+        logger:
+          mode: {{ .Parameters.oidc.logger.mode }}
+          level: {{ .Parameters.oidc.logger.level  }}
+        server:
+          certificateIssuer: {{ .Context.certificateIssuer.public }}
+          tls: true
+        ingress:
+          host: {{ .Parameters.oidc.ingress.host}}.{{.Context.ingress.domain}}
+          class: {{ .Context.ingress.className }}
+        postLogoutURL: https://{{ .Parameters.oidc.ingress.host}}.{{.Context.ingress.domain}}/index
+        issuer: https://{{ .Parameters.oidc.ingress.host}}.{{.Context.ingress.domain}}
+        networkPolicies:
+          enabled: {{ .Context.networkPolicies}}
+        sso:
+          cleanupPeriod: 5m
+          sticky: {{ .Parameters.oidc.sso.sticky }}
+        allowPasswordGrant: {{ .Parameters.oidc.allowPasswordGrant }}
+        enforcePKCE: {{ .Parameters.oidc.enforcePKCE }}
+roles:
+  - oidc
+

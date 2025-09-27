@@ -15,7 +15,7 @@ schema:
           clientId: { type:  string, default: "k8s" }
           clientSecret: { type:  string, required: false }
           usernamePrefix: { type: string, default: "-" }
-          groupsPrefix: { type: string, default: "-" }
+          groupsPrefix: { type: string, default: "oidc-" }
       kubeconfig:
         properties:
           enabled: { type: boolean, default: true }
@@ -28,7 +28,7 @@ schema:
           enabled: { type: boolean, default: true }
           timeoutApiServerDown: { type: string, default: "30s" }
           timeoutApiServerUp: { type: string, default: "4m" }
-
+          timeoutHelmRelease: { type: string, default: "6m" }
   context:
     properties:
       certificateIssuer:
@@ -62,6 +62,7 @@ modules:
       oci:
         repository: quay.io/kubauth/charts/okit-ac
         tag: 0.1.0-snapshot
+    timeout: "{{ .Parameters.apiserver.timeoutHelmRelease }}"
     values: |
       config:
         timeoutApiServerDown: {{ .Parameters.apiserver.timeoutApiServerDown }}
