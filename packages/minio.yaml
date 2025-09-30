@@ -39,28 +39,25 @@ schema:
         properties:
           enabled: { type: boolean, default: false }
           host: { type: string, required: true }
-      environment:
+      oidc:
         properties:
-          MINIO_IDENTITY_LDAP_SERVER_ADDR: { type: string }
-          MINIO_IDENTITY_LDAP_LOOKUP_BIND_DN: { type: string }
-          MINIO_IDENTITY_LDAP_LOOKUP_BIND_PASSWORD: { type: string }
-          MINIO_IDENTITY_LDAP_USER_DN_SEARCH_BASE_DN: { type: string }
-          MINIO_IDENTITY_LDAP_USER_DN_SEARCH_FILTER: { type: string }
-          MINIO_IDENTITY_LDAP_GROUP_SEARCH_BASE_DN: { type: string }
-          MINIO_IDENTITY_LDAP_GROUP_SEARCH_FILTER: { type: string }
-          MINIO_IDENTITY_LDAP_TLS_SKIP_VERIFY: { type: string }
-          MINIO_IDENTITY_LDAP_SERVER_INSECURE: { type: string }
-          MINIO_IDENTITY_LDAP_SERVER_STARTTLS: { type: string }
-          MINIO_IDENTITY_LDAP_SRV_RECORD_NAME: { type: string }
-          MINIO_IDENTITY_LDAP_COMMENT: { type: string }
-          MINIO_IDENTITY_OPENID_CONFIG_URL: { type: string }
-          MINIO_IDENTITY_OPENID_CLIENT_ID: { type: string }
-          MINIO_IDENTITY_OPENID_CLIENT_SECRET: { type: string }
-          MINIO_IDENTITY_OPENID_CLAIM_NAME: { type: string }
-          MINIO_IDENTITY_OPENID_DISPLAY_NAME: { type: string }
-          MINIO_IDENTITY_OPENID_CLAIM_USERINFO: { type: string }
-          MINIO_IDENTITY_OPENID_REDIRECT_URI: { type: string }
-          MINIO_BROWSER_REDIRECT_URL: { type: string }
+          enabled: { type: boolean }
+          clientId: { type: string, required: true }
+          clientSecret: { type: string }
+#      environment:
+#        properties:
+#          MINIO_IDENTITY_LDAP_SERVER_ADDR: { type: string }
+#          MINIO_IDENTITY_LDAP_LOOKUP_BIND_DN: { type: string }
+#          MINIO_IDENTITY_LDAP_LOOKUP_BIND_PASSWORD: { type: string }
+#          MINIO_IDENTITY_LDAP_USER_DN_SEARCH_BASE_DN: { type: string }
+#          MINIO_IDENTITY_LDAP_USER_DN_SEARCH_FILTER: { type: string }
+#          MINIO_IDENTITY_LDAP_GROUP_SEARCH_BASE_DN: { type: string }
+#          MINIO_IDENTITY_LDAP_GROUP_SEARCH_FILTER: { type: string }
+#          MINIO_IDENTITY_LDAP_TLS_SKIP_VERIFY: { type: string }
+#          MINIO_IDENTITY_LDAP_SERVER_INSECURE: { type: string }
+#          MINIO_IDENTITY_LDAP_SERVER_STARTTLS: { type: string }
+#          MINIO_IDENTITY_LDAP_SRV_RECORD_NAME: { type: string }
+#          MINIO_IDENTITY_LDAP_COMMENT: { type: string }
   context:
     properties:
       certificateIssuer:
@@ -75,6 +72,9 @@ schema:
         required: true
         properties:
           domain: { type: string, required: true }
+      oidc:
+        properties:
+          issuerURL: { type: string, required: true }
 modules:
   - name: main
     source:
@@ -82,8 +82,8 @@ modules:
         path: ../charts/minio/5.4.0
     values: |
       minio:
-        rootUser: minio 
-        rootPassword: minio123 
+        rootUser: {{ .Parameters.rootUser }} 
+        rootPassword: {{ .Parameters.rootPassword }} 
         clusterIssuer: {{ .Context.certificateIssuer.internal }}
         tls:
           enabled: true
@@ -123,14 +123,25 @@ modules:
           host: {{ .Parameters.vip.host }}
           ip: {{ resolveDNS .Parameters.vip.host }}
         {{- end }}
-        {{- with .Parameters.environment }}
+        {{- if .Parameters.oidc.enabled }}
         environment:
-          {{- toYaml . | nindent 6 }}
+          MINIO_IDENTITY_OPENID_CONFIG_URL: {{ .Context.oidc.issuerURL }}/.well-known/openid-configuration
+          MINIO_IDENTITY_OPENID_CLIENT_ID: {{ .Parameters.oidc.clientId }}
+          MINIO_IDENTITY_OPENID_CLIENT_SECRET: {{ .Parameters.oidc.clientSecret }}
+          MINIO_IDENTITY_OPENID_CLAIM_NAME: "policy"
+          MINIO_IDENTITY_OPENID_DISPLAY_NAME: "KUBAUTH"
+          MINIO_IDENTITY_OPENID_CLAIM_USERINFO: "on"
+          MINIO_IDENTITY_OPENID_REDIRECT_URI: https://{{ $hostConsole }}.{{ .Context.ingress.domain }}/oauth_callback
         {{- end }}
         users: []
-dependencies:
+dependencies: |
+  - storage
   - ingress
   - certManager
+  {{- if .Parameters.oidc.enabled }}
+  - oidc-server
+  {{ end }}
+
 roles:
   - objectStore
   - "{{.Release.metadata.namespace}}-objectStore"

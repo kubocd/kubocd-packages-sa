@@ -43,7 +43,7 @@ modules:
   - name: main
     source:
       oci:
-        repository: quay.io/kubauth/charts/kubauth
+        repository: quay.io/kubauth/charts/kubauth-server
         tag: 0.1.1-snapshot
     values: |
       replicaCount: {{ .Parameters.replicaCount }}
@@ -75,5 +75,7 @@ modules:
         allowPasswordGrant: {{ .Parameters.oidc.allowPasswordGrant }}
         enforcePKCE: {{ .Parameters.oidc.enforcePKCE }}
 roles:
-  - oidc
-
+  - oidc-server
+dependencies:
+  - ingress
+  - certManager

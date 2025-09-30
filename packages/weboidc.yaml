@@ -68,6 +68,9 @@ modules:
           secret:
             name: certs-bundle
             key: ca.crt
-dependencies:
-  - oidc
-
+dependencies: |
+  - ingress
+  - oidc-server
+  {{ if .Parameters.tls }}
+  - certManager
+  {{ end }}

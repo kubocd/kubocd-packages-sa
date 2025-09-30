@@ -1,7 +1,7 @@
 
 
 apiVersion: v1alpha1
-name: okit
+name: kubauth-kit
 tag: 0.1.0-p01
 schema:
   parameters:
@@ -20,7 +20,7 @@ schema:
         properties:
           enabled: { type: boolean, default: true }
           replicaCount: { type: integer, default: 1 }
-          host: { type: string, default: "okit" }
+          host: { type: string, default: "kit" }
           tls: { type: boolean, default: true }
           namespace: { type: string, required: false, description: "Will be default namespace for logged users" }
       apiserver:
@@ -60,7 +60,7 @@ modules:
     enabled: "{{ .Parameters.apiserver.enabled }}"
     source:
       oci:
-        repository: quay.io/kubauth/charts/okit-ac
+        repository: quay.io/kubauth/charts/kubauth-kit-apiserver
         tag: 0.1.0-snapshot
     timeout: "{{ .Parameters.apiserver.timeoutHelmRelease }}"
     values: |
@@ -78,7 +78,7 @@ modules:
     enabled: "{{ .Parameters.kubeconfig.enabled }}"
     source:
       oci:
-        repository: quay.io/kubauth/charts/okit-kc
+        repository: quay.io/kubauth/charts/kubauth-kit-kubeconfig
         tag: 0.1.0-snapshot
     values: |
       replicaCount: {{ .Parameters.kubeconfig.replicaCount }}
@@ -108,3 +108,7 @@ modules:
             clientSecret: {{ .Context.oidc.clientSecret }}
     dependsOn:
       - apiserver
+dependencies:
+  - oidc-server
+  - ingress
+  - cert-manager

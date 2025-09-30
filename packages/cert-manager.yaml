@@ -95,3 +95,4 @@ modules:
       {{ end }}
 roles:
   - certManager
+  - cert-manager
