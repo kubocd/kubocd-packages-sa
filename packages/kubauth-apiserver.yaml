@@ -1,0 +1,57 @@
+
+
+apiVersion: v1alpha1
+name: kubauth-apiserver
+tag: 0.1.0-p01
+schema:
+  parameters:
+    properties:
+      logger:
+        properties:
+          mode: { type: string, default: text, enum: [ "text", "json"], description: "Log format. Apply to all module" }
+          level: { type: string, default: info, enum: [ "error", "info", "debug", "trace"], description: "Default log level for all modules" }
+      oidc:
+        properties:
+          clientId: { type:  string, default: "k8s" }
+          clientSecret: { type:  string, required: false }
+          usernamePrefix: { type: string, default: "-" }
+          groupsPrefix: { type: string, default: "oidc-" }
+      apiserver:
+        properties:
+          timeoutApiServerDown: { type: string, default: "30s" }
+          timeoutApiServerUp: { type: string, default: "4m" }
+          timeoutHelmRelease: { type: string, default: "6m" }
+  context:
+    properties:
+      oidc:
+        required: true
+        properties:
+          issuerURL: { type: string, required: true }
+          issuerCaSecretName: { type: string, default: "certs-bundle"}
+          issuerCaName: { type: string, default: "ca.crt"}
+          clientId: { type: string, default: "k8s" }
+          clientSecret: { type: string, required: false }
+
+modules:
+  - name: apiserver
+    source:
+      oci:
+        repository: quay.io/kubauth/charts/kubauth-apiserver
+        tag: 0.1.0-snapshot
+    timeout: "{{ .Parameters.apiserver.timeoutHelmRelease }}"
+    values: |
+      logger:
+        mode: {{ .Parameters.logger.mode }}
+        level: {{ .Parameters.logger.level }}
+      config:
+        timeoutApiServerDown: {{ .Parameters.apiserver.timeoutApiServerDown }}
+        timeoutApiServerUp: {{ .Parameters.apiserver.timeoutApiServerUp }}
+        oidc:
+          issuerURL: "{{ .Context.oidc.issuerURL }}"
+          issuerCaSecretName: {{ .Context.oidc.issuerCaSecretName }}
+          issuerCaName: {{ .Context.oidc.issuerCaName }}
+          clientId: {{ .Context.oidc.clientId }}
+          usernamePrefix: "{{ .Parameters.oidc.usernamePrefix }}"
+          groupsPrefix: "{{ .Parameters.oidc.groupsPrefix }}"
+dependencies:
+  - oidc-server
