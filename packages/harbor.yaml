@@ -1,0 +1,28 @@
+
+
+apiVersion: v1alpha1
+name: harbor
+tag: 1.18.0-p01
+protected: false
+schema:
+  context:
+    properties:
+      ingress:
+        required: true
+        properties:
+          className: { type: string, default: "nginx"}
+          domain: { type: string, required: true }
+modules:
+  - name: main
+    source:
+      git:
+        url: https://github.com/goharbor/harbor-helm
+        branch: main
+        path: /
+    values: |
+      externalURL: https://harbor.{{.Context.ingress.domain}}
+      expose:
+        ingress:
+          hosts:
+            core: harbor.{{.Context.ingress.domain}}
+          className: {{ .Context.ingress.className }}      

@@ -128,7 +128,7 @@ modules:
           sticky: {{ .Parameters.oidc.sso.sticky }}
         allowPasswordGrant: {{ .Parameters.oidc.allowPasswordGrant }}
         enforcePKCE: {{ .Parameters.oidc.enforcePKCE }}
-        idp:
+        idProvider:
           {{- if .Parameters.audit.enabled }}
           baseURL: http://localhost:6805
           {{- else if .Parameters.merger.enabled }}
@@ -146,7 +146,7 @@ modules:
         logger:
           mode: {{ .Parameters.logger.mode }}
           level: {{ .Parameters.audit.logger.level | default .Parameters.logger.level }}
-        idp:
+        idProvider:
           {{- if .Parameters.merger.enabled }}
           baseURL: http://localhost:6804
           {{- else if .Parameters.ldap.enabled }}
@@ -162,25 +162,11 @@ modules:
         logger:
           mode: {{ .Parameters.logger.mode }}
           level: {{ .Parameters.merger.logger.level | default .Parameters.logger.level }}
-        providers:
-          {{- if .Parameters.ucrd.enabled }}
-          - name: ucrd
-            httpConfig:
-              baseUrl: http://localhost:6802
-            credentialAuthority: {{ .Parameters.ucrd.credentialAuthority }}
-            groupAuthority: {{ .Parameters.ucrd.groupAuthority }}
-            groupPattern: "{{ .Parameters.ucrd.groupPattern }}"
-            claimAuthority: {{ .Parameters.ucrd.claimAuthority }}
-            claimPattern: "{{ .Parameters.ucrd.claimPattern }}"
-            nameAuthority: {{ .Parameters.ucrd.nameAuthority }}
-            emailAuthority: {{ .Parameters.ucrd.emailAuthority }}
-            critical: {{ .Parameters.ucrd.critical }}
-            uidOffset: {{ .Parameters.ucrd.uidOffset }}
-          {{- end }}
+        idProviders:
           {{- if .Parameters.ldap.enabled }}
           - name: ldap
             httpConfig:
-              baseUrl: http://localhost:6803
+              baseURL: http://localhost:6803
             credentialAuthority: {{ .Parameters.ldap.credentialAuthority }}
             groupAuthority: {{ .Parameters.ldap.groupAuthority }}
             groupPattern: "{{ .Parameters.ldap.groupPattern }}"
@@ -190,6 +176,20 @@ modules:
             emailAuthority: {{ .Parameters.ldap.emailAuthority }}
             critical: {{ .Parameters.ldap.critical }}
             uidOffset: {{ .Parameters.ldap.uidOffset }}
+          {{- end }}
+          {{- if .Parameters.ucrd.enabled }}
+          - name: ucrd
+            httpConfig:
+              baseURL: http://localhost:6802
+            credentialAuthority: {{ .Parameters.ucrd.credentialAuthority }}
+            groupAuthority: {{ .Parameters.ucrd.groupAuthority }}
+            groupPattern: "{{ .Parameters.ucrd.groupPattern }}"
+            claimAuthority: {{ .Parameters.ucrd.claimAuthority }}
+            claimPattern: "{{ .Parameters.ucrd.claimPattern }}"
+            nameAuthority: {{ .Parameters.ucrd.nameAuthority }}
+            emailAuthority: {{ .Parameters.ucrd.emailAuthority }}
+            critical: {{ .Parameters.ucrd.critical }}
+            uidOffset: {{ .Parameters.ucrd.uidOffset }}
           {{- end }}
   
     

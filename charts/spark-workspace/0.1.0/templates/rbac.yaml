@@ -1,0 +1,50 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ .Values.roleName }}
+  namespace: {{ .Values.namespace }}
+rules:
+  - apiGroups: [""]
+    resources:
+      - pods
+      - services
+      - configmaps
+      - persistentvolumeclaims
+      - secrets
+    verbs: ["*"]
+  - apiGroups: [""]
+    resources: [ "pods/log" ]
+    verbs: [ "get", "list" ]
+  - apiGroups: [""]
+    resources: [ "pods/portforward" ]
+    verbs: [ "get", "list", "create" ]
+{{ if .Values.kubernetesJobs.manage }}
+  - apiGroups: [ "batch"]
+    resources: ["jobs", "cronjobs"]
+    verbs: ["*"]
+{{ end }}
+{{ if .Values.workflow.manage }}
+  - apiGroups: [ "argoproj.io" ]
+    resources: ["clusterworkflowtemplates", "cronworkflows", "workfloweventbindings", "workflows", "workflowtasksets", "workflowtemplates", "workflowtaskresults" ]
+    verbs: ["*"]
+{{ end }}
+{{ if .Values.secretStore.manage}}
+  - apiGroups: [ "external-secrets.io" ]
+    resources: [ "secretstores", "externalsecrets" ]
+    verbs: ["*"]
+{{ end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ .Values.roleName }}-{{ .Values.serviceAccountName }}
+  namespace: {{ .Values.namespace }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Values.serviceAccountName }}
+    namespace: {{ .Values.namespace }}
+roleRef:
+  kind: Role
+  name: {{ .Values.roleName }}
+  apiGroup: rbac.authorization.k8s.io

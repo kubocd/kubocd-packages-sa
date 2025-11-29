@@ -1,0 +1,31 @@
+
+namespace: # TBD
+
+kyverno:
+  enabled: false
+  namespace: kyverno
+
+serviceAccountName: spark
+roleName: spark
+
+# Regex of allowed assumed role (".*" for all)
+# permittedIamRole:
+
+# Set to true to grant psp:priviledged on serviceAccountName
+relaxPsp: false
+
+# Allow service account to manage Kubernetes jobs and cronjobs
+kubernetesJobs:
+  manage: true
+
+s3access:
+  accessKey:
+  secretKey:
+
+# Allow service account to manage external-secret secretstore and externalsecrets
+secretStore:
+  manage: true
+
+workflow:
+  manage: false  # True to allow 'service' serviceAccount to manage Argo Workflow resources
+  guiOidcGroups: []  # List of OIDC groups which will be impersonated in 'service' account on the Argo workflow server.
