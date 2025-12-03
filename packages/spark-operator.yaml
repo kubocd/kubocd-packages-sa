@@ -57,7 +57,7 @@ schema:
         type: array
         items:
           type: string
-        description: "List of namespaces where Spark jobs can run. Empty list allows all namespaces."
+        description: "List of namespaces where Spark jobs can run. If empty string is included, all namespaces will be allowed"
       metricsEnabled:
         type: boolean
         default: true
@@ -84,14 +84,14 @@ modules:
     values: |
       # Helm hook configuration
       hook:
-        upgradeCrd: {{ .Parameters.webhookEnabled | default true }}
+        upgradeCrd: false
 
       # Prometheus metrics configuration
       prometheus:
         metrics:
-          enable: {{ .Parameters.metricsEnabled | default true }}
+          enable: {{ .Parameters.metricsEnabled }}
         podMonitor:
-          create: {{ .Parameters.podMonitorEnabled | default false }}
+          create: {{ .Parameters.podMonitorEnabled }}
 
       # Controller RBAC
       controller:
@@ -103,7 +103,7 @@ modules:
 
       # Webhook configuration
       webhook:
-        enable: {{ .Parameters.webhookEnabled | default true }}
+        enable: {{ .Parameters.webhookEnabled }}
         podSecurityContext:
           fsGroup: null
 
@@ -111,7 +111,7 @@ modules:
       spark:
         # List of namespaces where to run spark jobs
         # If empty string is included, all namespaces will be allowed
-        # Make sure the namespaces have already existed
+        # Make sure the namespaces already exist.
         jobNamespaces: {{ .Parameters.jobNamespaces | default (list) | toJson }}
 
         serviceAccount:
@@ -123,5 +123,5 @@ modules:
           create: false
 
 roles:
-  - spark
+  - sparkOperator
 dependencies: []

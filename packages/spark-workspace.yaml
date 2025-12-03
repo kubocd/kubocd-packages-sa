@@ -29,7 +29,6 @@ schema:
           guiOidcGroups:
             description: "List of OIDC groups which will be impersonated in 'service' account on the Argo workflow server."
             items: { type: string }
-
 modules:
   - name: main
     source:
@@ -56,9 +55,4 @@ modules:
 
       workflow:
         manage: {{ .Parameters.workflow.manage }}
-        {{- if eq (len .Parameters.workflow.guiOidcGroups) 0 }}
-        guiOidcGroups: []
-        {{- else }}
-        guiOidcGroups:
-          {{- toYaml .Parameters.workflow.guiOidcGroups | nindent 2 }}
-        {{- end }}
+        guiOidcGroups: {{ .Parameters.workflow.guiOidcGroups | default (list) | toJson }}
