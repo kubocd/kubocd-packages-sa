@@ -1,8 +1,0 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: {{ required "The namespace must be defined in value file" .Values.namespace }}
-{{ if .Values.permittedIamRole }}
-  annotations:
-    iam.amazonaws.com/permitted: {{ .Values.permittedIamRole }}
-{{ end }}

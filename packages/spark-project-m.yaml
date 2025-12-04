@@ -1,0 +1,98 @@
+
+apiVersion: v1alpha1
+name: spark-project-m
+tag: 0.1.0-p01
+protected: false
+schema:
+  parameters:
+    properties:
+      projectId:  { type: string, required: true }
+      serviceAccountName: { type: string, default: "spark"}
+      roleName: { type: string, default: "spark"}
+      kubernetesJobs:
+        properties:
+          manage: { type: boolean, default: true, description: "Allow the serviceAccount to manage Kubernetes jobs and cronjobs" }
+      secretStore:
+        properties:
+          manage: { type: boolean, default: false, description: "Allow the serviceAccount to manage external-secret secretStore and externalSecrets" }
+      s3access:
+        properties:
+          accessKey: { type: string, required: true }
+          secretKey: { type: string, required: true }
+      workflow:
+        properties:
+          enabled: { type: boolean, default: false, description: "Deploy Argo Workflow" }
+          guiOidcGroups:
+            description: "List of OIDC groups which will be impersonated in 'service' account on the Argo workflow server."
+            items: { type: string }
+      sparkOperator:
+        properties:
+          enabled: { type: boolean, default: true, description: "Deploy spark operator" }
+          metricsEnabled: { type: boolean, default: true, description: "Enable Prometheus metrics" }
+          podMonitorEnabled: { type: boolean, default: false, description: "Create PodMonitor for metrics collection" }
+          webhookEnabled: { type: boolean, default: true, description: "Enable admission webhook for validation and mutation" }
+
+modules:
+  - name: workspace
+    source:
+      local:
+        path: ../charts/spark-workspace/0.1.0
+    values: |
+      baseNamespace: {{ .Parameters.projectId }}
+      serviceAccountName: {{ .Parameters.serviceAccountName }}
+      roleName: {{ .Parameters.roleName }}
+      kubernetesJobs:
+        manage: {{ .Parameters.kubernetesJobs.manage }}
+      secretStore:
+        manage: {{ .Parameters.secretStore.manage }}
+      s3access:
+        accessKey: {{ .Parameters.s3access.accessKey }}
+        secretKey: {{ .Parameters.s3access.secretKey }}
+      workflow:
+        manage: {{ .Parameters.workflow.enabled }}
+        guiOidcGroups: {{ .Parameters.workflow.guiOidcGroups | default (list) | toJson }}
+  - name: spark-operator
+    enabled: "{{ .Parameters.sparkOperator.enabled }}"
+    targetNamespace: "{{ .Parameters.projectId }}-sys"
+    dependsOn:
+      - workspace
+    timeout: 2m
+    source:
+      helmRepository:
+        url: https://kubeflow.github.io/spark-operator
+        chart: spark-operator
+        version: 2.4.0
+    values: |
+      # Helm hook configuration
+      hook:
+        upgradeCrd: false
+      # Prometheus metrics configuration
+      prometheus:
+        metrics:
+          enabled: {{ .Parameters.sparkOperator.metricsEnabled }}
+        podMonitor:
+          create: {{ .Parameters.sparkOperator.podMonitorEnabled }}
+      # Controller RBAC
+      controller:
+        rbac:
+          createRole: true
+        podSecurityContext:
+          fsGroup: null
+      # Webhook configuration
+      webhook:
+        enable: {{ .Parameters.sparkOperator.webhookEnabled }}  # 'enable':, not 'enabled' in helm chart
+        podSecurityContext:
+          fsGroup: null
+      # Spark application configuration
+      spark:
+        # List of namespaces where to run spark jobs
+        # If empty string is included, all namespaces will be allowed
+        # Make sure the namespaces already exist.
+        jobNamespaces: 
+          - {{ .Parameters.projectId }}-user
+        serviceAccount:
+          # Specifies whether to create a service account for spark applications
+          create: false
+        rbac:
+          # Specifies whether to create RBAC resources for spark applications
+          create: false

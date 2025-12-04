@@ -89,7 +89,7 @@ modules:
       # Prometheus metrics configuration
       prometheus:
         metrics:
-          enable: {{ .Parameters.metricsEnabled }}
+          enabled: {{ .Parameters.metricsEnabled }}
         podMonitor:
           create: {{ .Parameters.podMonitorEnabled }}
 
@@ -103,7 +103,7 @@ modules:
 
       # Webhook configuration
       webhook:
-        enable: {{ .Parameters.webhookEnabled }}
+        enable: {{ .Parameters.webhookEnabled }}  # enable:, not enabled in helm chart
         podSecurityContext:
           fsGroup: null
 

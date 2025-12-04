@@ -1,0 +1,17 @@
+
+protected: false
+
+projectId: # TBD
+
+s3access:
+  accessKey: # TBD
+  secretKey: # TBD
+
+workflow:
+  enabled: false
+  guiOidcGroups: []
+
+sparkOperator:
+  enabled: true
+  webhookEnabled: true
+

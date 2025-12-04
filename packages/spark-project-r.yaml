@@ -1,12 +1,12 @@
 
 apiVersion: v1alpha1
-name: spark-workspace
+name: spark-project-r
 tag: 0.1.0-p01
 protected: false
 schema:
   parameters:
     properties:
-      baseNamespace: { type: string, required: true }
+      projectId:  { type: string, required: true }
       serviceAccountName: { type: string, default: "spark"}
       roleName: { type: string, default: "spark"}
       kubernetesJobs:
@@ -17,34 +17,32 @@ schema:
           manage: { type: boolean, default: true, description: "Allow the serviceAccount to manage external-secret secretStore and externalSecrets" }
       s3access:
         properties:
-          accessKey: { type: string, default: "" }
-          secretKey: { type: string, default: "" }
+          accessKey: { type: string, required: true }
+          secretKey: { type: string, required: true }
       workflow:
         properties:
-          manage: { type: boolean, default: true, description: "Allow the serviceAccount to manage Argo Workflow resources" }
+          enabled: { type: boolean, default: false, description: "Deploy Argo Workflow" }
           guiOidcGroups:
             description: "List of OIDC groups which will be impersonated in 'service' account on the Argo workflow server."
             items: { type: string }
+      sparkOperator:
+        properties:
+          enabled: { type: boolean, default: true, description: "Deploy spark operator" }
 modules:
   - name: main
     source:
       local:
-        path: ../charts/spark-workspace/0.1.0
+        path: ../charts/spark-project/0.1.0
     values: |
-      baseNamespace: {{ .Parameters.baseNamespace }}
-      serviceAccountName: {{ .Parameters.serviceAccountName }}
-      roleName: {{ .Parameters.roleName }}
-
-      kubernetesJobs:
-        manage: {{ .Parameters.kubernetesJobs.manage }}
-
-      secretStore:
-        manage: {{ .Parameters.secretStore.manage }}
-
+      projectId: {{ .Parameters.projectId }}
+      protected: {{ .Release.spec.protected }}
       s3access:
         accessKey: {{ .Parameters.s3access.accessKey }}
         secretKey: {{ .Parameters.s3access.secretKey }}
-
       workflow:
-        manage: {{ .Parameters.workflow.manage }}
-        guiOidcGroups: {{ .Parameters.workflow.guiOidcGroups | default (list) | toJson }}
+        enabled: false
+        guiOidcGroups: []
+      sparkOperator:
+        enabled: {{ .Parameters.sparkOperator.enabled }}
+
+

@@ -1,0 +1,26 @@
+
+---
+apiVersion: kubocd.kubotal.io/v1alpha1
+kind: Release
+metadata:
+  name: {{ .Values.projectId }}-spark-workspace
+  namespace: kubocd
+spec:
+  description: The spark workspace of projet {{ .Values.projectId }}
+  protected: {{ .Values.protected }}
+  package:
+    repository: quay.io/kubosa/packages/spark-workspace
+    tag: 0.1.0-p01
+    interval: 30m
+  targetNamespace: kubocd
+  createNamespace: false
+  parameters:
+    baseNamespace: {{ .Values.projectId }}
+    workflow:
+      manage: {{ .Values.workflow.enabled }}
+      guiOidcGroups: {{ .Values.workflow.guiOidcGroups | default (list) | toJson }}
+    s3access:
+      accessKey: {{ .Values.s3access.accessKey }}
+      secretKey: {{ .Values.s3access.secretKey }}
+  roles:
+    - spark-workspace-{{ .Values.projectId }}
