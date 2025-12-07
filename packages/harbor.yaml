@@ -26,3 +26,5 @@ modules:
           hosts:
             core: harbor.{{.Context.ingress.domain}}
           className: {{ .Context.ingress.className }}      
+          annotations:
+            cert-manager.io/cluster-issuer: {{ .Context.certificateIssuer.public }}
