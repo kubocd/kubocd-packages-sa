@@ -2,7 +2,7 @@
 
 apiVersion: v1alpha1
 name: kubauth-apiserver
-tag: 0.1.0-p01
+tag: 0.1.0-p02
 schema:
   parameters:
     properties:
@@ -33,7 +33,7 @@ schema:
           clientSecret: { type: string, required: false }
 
 modules:
-  - name: apiserver
+  - name: noname
     source:
       oci:
         repository: quay.io/kubauth/charts/kubauth-apiserver

@@ -2,7 +2,7 @@
 
 apiVersion: v1alpha1
 name: kubauth
-tag: 0.1.2-p01
+tag: 0.1.2-p02
 schema:
   parameters:
     properties:
@@ -10,7 +10,18 @@ schema:
         properties:
           mode: { type: string, default: text, enum: [ "text", "json"], description: "Log format. Apply to all module" }
           level: { type: string, default: info, enum: [ "error", "info", "debug", "trace"], description: "Default log level for all modules" }
-      deployInControlPlane: { type: boolean, default: true }
+      deployInControlPlane: { type: boolean, default: false }
+      tolerations:
+        items:
+          properties:
+            key: { type: string, required: true }
+            operator: { type: string, required: true }
+            effect: { type: string, required: false }
+            value: { type: string, required: false }
+            tolerationSeconds: { type: integer, required: false }
+      nodeSelector:
+        properties: {}
+        additionalProperties: true
       oidc:
         properties:
           logger:
@@ -96,13 +107,29 @@ schema:
 
 
 modules:
-  - name: main
+  - name: noname
     source:
       oci:
         repository: quay.io/kubauth/charts/kubauth
         tag: 0.1.2-snapshot
     values: |
       deployInControlPlane: {{ .Parameters.deployInControlPlane }}
+      {{- with .Parameters.tolerations }}
+      tolerations:
+      {{- range . }}
+        - key: {{ .key }}
+          operator: {{ .operator }}
+          {{ with .effect }}effect: {{.}}{{end}}
+          {{ with .value }}value: {{.}}{{end}}
+          {{ with .tolerationSeconds }}tolerationSeconds: {{.}}{{end}}
+      {{- end }}
+      {{- end }}
+      {{- with .Parameters.nodeSelector }}
+      nodeSelector:
+      {{- range $k, $v := . }}
+        {{ $k }}: {{ $v }}
+      {{- end }}
+      {{- end }}
       networkPolicies:
         forWebhooks: true
         {{- with .Context.cluster.hostNetworkCidr }}

@@ -1,7 +1,7 @@
 
 apiVersion: v1alpha1
 name: minio
-tag: 5.4.0-p01
+tag: 5.4.0-p02
 protected: true
 schema:
   parameters:
@@ -17,6 +17,17 @@ schema:
           drivesPerNode: { type: integer, enum: [ 1, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56 ], default: 1 }
           replicas: { type: integer, enum: [ 1, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56 ], default: 1 }
           pools: { type: integer, default: 1 }
+      tolerations:
+        items:
+          properties:
+            key: { type: string, required: true }
+            operator: { type: string, required: true }
+            effect: { type: string, required: false }
+            value: { type: string, required: false }
+            tolerationSeconds: { type: integer, required: false }
+      nodeSelector:
+        properties: {}
+        additionalProperties: true
       ingresses:
         properties:
           passThrough:
@@ -44,20 +55,20 @@ schema:
           enabled: { type: boolean }
           clientId: { type: string, required: true }
           clientSecret: { type: string }
-#      environment:
-#        properties:
-#          MINIO_IDENTITY_LDAP_SERVER_ADDR: { type: string }
-#          MINIO_IDENTITY_LDAP_LOOKUP_BIND_DN: { type: string }
-#          MINIO_IDENTITY_LDAP_LOOKUP_BIND_PASSWORD: { type: string }
-#          MINIO_IDENTITY_LDAP_USER_DN_SEARCH_BASE_DN: { type: string }
-#          MINIO_IDENTITY_LDAP_USER_DN_SEARCH_FILTER: { type: string }
-#          MINIO_IDENTITY_LDAP_GROUP_SEARCH_BASE_DN: { type: string }
-#          MINIO_IDENTITY_LDAP_GROUP_SEARCH_FILTER: { type: string }
-#          MINIO_IDENTITY_LDAP_TLS_SKIP_VERIFY: { type: string }
-#          MINIO_IDENTITY_LDAP_SERVER_INSECURE: { type: string }
-#          MINIO_IDENTITY_LDAP_SERVER_STARTTLS: { type: string }
-#          MINIO_IDENTITY_LDAP_SRV_RECORD_NAME: { type: string }
-#          MINIO_IDENTITY_LDAP_COMMENT: { type: string }
+  #      environment:
+  #        properties:
+  #          MINIO_IDENTITY_LDAP_SERVER_ADDR: { type: string }
+  #          MINIO_IDENTITY_LDAP_LOOKUP_BIND_DN: { type: string }
+  #          MINIO_IDENTITY_LDAP_LOOKUP_BIND_PASSWORD: { type: string }
+  #          MINIO_IDENTITY_LDAP_USER_DN_SEARCH_BASE_DN: { type: string }
+  #          MINIO_IDENTITY_LDAP_USER_DN_SEARCH_FILTER: { type: string }
+  #          MINIO_IDENTITY_LDAP_GROUP_SEARCH_BASE_DN: { type: string }
+  #          MINIO_IDENTITY_LDAP_GROUP_SEARCH_FILTER: { type: string }
+  #          MINIO_IDENTITY_LDAP_TLS_SKIP_VERIFY: { type: string }
+  #          MINIO_IDENTITY_LDAP_SERVER_INSECURE: { type: string }
+  #          MINIO_IDENTITY_LDAP_SERVER_STARTTLS: { type: string }
+  #          MINIO_IDENTITY_LDAP_SRV_RECORD_NAME: { type: string }
+  #          MINIO_IDENTITY_LDAP_COMMENT: { type: string }
   context:
     properties:
       certificateIssuer:
@@ -76,7 +87,7 @@ schema:
         properties:
           issuerURL: { type: string, required: true }
 modules:
-  - name: main
+  - name: noname
     source:
       local:
         path: ../charts/minio/5.4.0
@@ -84,6 +95,22 @@ modules:
       minio:
         rootUser: {{ .Parameters.rootUser }} 
         rootPassword: {{ .Parameters.rootPassword }} 
+        {{- with .Parameters.tolerations }}
+        tolerations:
+        {{- range . }}
+          - key: {{ .key }}
+            operator: {{ .operator }}
+            {{ with .effect }}effect: {{.}}{{end}}
+            {{ with .value }}value: {{.}}{{end}}
+            {{ with .tolerationSeconds }}tolerationSeconds: {{.}}{{end}}
+        {{- end }}
+        {{- end }}
+        {{- with .Parameters.nodeSelector }}
+        nodeSelector:
+        {{- range $k, $v := . }}
+          {{ $k }}: {{ $v }}
+        {{- end }}
+        {{- end }}
         clusterIssuer: {{ .Context.certificateIssuer.internal }}
         tls:
           enabled: true

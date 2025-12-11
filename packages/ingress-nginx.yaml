@@ -2,9 +2,12 @@
 
 apiVersion: v1alpha1
 name: ingress-nginx
-tag: 4.12.1-p01
+tag: 4.12.1-p02
 protected: true
 schema:
+  parameters:
+    properties:
+      deployInControlPlane: { type: boolean, default: false }
   context:
     properties:
       ingress:
@@ -18,7 +21,7 @@ schema:
             properties:
               enabled: { type: boolean, default: false }
 modules:
-  - name: main
+  - name: noname
     timeout: 4m
     source:
       helmRepository:
@@ -27,6 +30,16 @@ modules:
         version: 4.12.1 # 4.10.0
     values: |
       controller:
+        {{- if .Parameters.deployInControlPlane }}
+        tolerations:
+          - key: "node-role.kubernetes.io/control-plane"
+            operator: "Exists"
+            effect: "NoSchedule"
+        nodeSelector:
+          node-role.kubernetes.io/control-plane: ""
+        {{- end }}
+        image:
+          image: ingress-nginx/controller
         service:
           annotations:
             metallb.universe.tf/loadBalancerIPs: {{ resolveDNS (.Context.ingress.vip | default .Context.ingress.domain) }}
@@ -44,11 +57,27 @@ modules:
           # registry: registry.k8s.io
       admissionWebhooks:
         patch:
+          {{- if .Parameters.deployInControlPlane }}
+          tolerations:
+            - key: "node-role.kubernetes.io/control-plane"
+              operator: "Exists"
+              effect: "NoSchedule"
+          nodeSelector:
+            node-role.kubernetes.io/control-plane: ""
+          {{- end }}
           image:
              {{ $redirection := imageRedirect "registry.k8s.io/ingress-nginx/kube-webhook-certgen" . }}
             image: {{ $redirection.baseRepository }}
             # image: ingress-nginx/kube-webhook-certgen
       defaultBackend:
+        {{- if .Parameters.deployInControlPlane }}
+        tolerations:
+          - key: "node-role.kubernetes.io/control-plane"
+            operator: "Exists"
+            effect: "NoSchedule"
+        nodeSelector:
+          node-role.kubernetes.io/control-plane: ""
+        {{- end }}
         image:
           {{ $redirection := imageRedirect "registry.k8s.io/defaultbackend-amd64" . }}
           image: {{ $redirection.baseRepository }}
@@ -59,7 +88,7 @@ modules:
       local:
         path: ../charts/wrapper/1.0.0
     dependsOn:
-    - main
+    - noname
     values:
       body: |
         apiVersion: networking.k8s.io/v1

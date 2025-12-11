@@ -1,11 +1,12 @@
 
 apiVersion: v1alpha1
 name: cert-manager
-tag: 1.17.1-p01
+tag: 1.17.1-p02
 protected: true
 schema:
   parameters:
     properties:
+      deployInControlPlane: { type: boolean, default: false }
       trust:
         properties:
           enabled: { type: boolean, default: false }
@@ -37,7 +38,7 @@ schema:
               properties:
                 name: { type: string, required: true}
 modules:
-  - name: main
+  - name: noname
     timeout: 4m
     source:
       helmRepository:
@@ -50,6 +51,43 @@ modules:
       image:
         {{ $redirection := imageRedirect "quay.io/jetstack/cert-manager-controller" . }}
         repository: {{ $redirection.repository }}
+      {{- if .Parameters.deployInControlPlane }}
+      tolerations:
+      - key: "node-role.kubernetes.io/control-plane"
+        operator: "Exists"
+        effect: "NoSchedule"
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: ""
+      {{- end }}
+      {{- if .Parameters.deployInControlPlane }}
+      webhook:
+        tolerations:
+          - key: "node-role.kubernetes.io/control-plane"
+            operator: "Exists"
+            effect: "NoSchedule"
+        nodeSelector:
+          node-role.kubernetes.io/control-plane: ""
+      {{- end }}
+      {{- if .Parameters.deployInControlPlane }}
+      cainjector:
+        tolerations:
+          - key: "node-role.kubernetes.io/control-plane"
+            operator: "Exists"
+            effect: "NoSchedule"
+        nodeSelector:
+          node-role.kubernetes.io/control-plane: ""
+      {{- end }}
+      {{- if .Parameters.deployInControlPlane }}
+      startupapicheck:
+        tolerations:
+          - key: "node-role.kubernetes.io/control-plane"
+            operator: "Exists"
+            effect: "NoSchedule"
+        nodeSelector:
+          node-role.kubernetes.io/control-plane: ""
+      {{- end }}
+
+
   - name: trust
     timeout: 2m
     enabled: "{{ .Parameters.trust.enabled }}"
@@ -59,6 +97,14 @@ modules:
         chart: trust-manager
         version: v0.16.0 # v0.9.2
     values: |
+      {{- if .Parameters.deployInControlPlane }}
+      tolerations:
+      - key: "node-role.kubernetes.io/control-plane"
+        operator: "Exists"
+        effect: "NoSchedule"
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: ""
+      {{- end }}
       app:
         trust:
           namespace: {{ .Release.spec.targetNamespace }}
@@ -70,7 +116,8 @@ modules:
         {{ $redirection := imageRedirect "quay.io/jetstack/trust-manager" . }}
         repository: {{ $redirection.repository }}
     dependsOn:
-      - main
+      - noname
+
   - name: issuers
     enabled: "{{ .Parameters.issuers.enabled }}"
     timeout: 2m
@@ -89,7 +136,7 @@ modules:
             enabled: {{ .Parameters.trust.bundle.target.secret.enabled }}
             key: {{ .Parameters.trust.bundle.target.secret.key }}
     dependsOn: |
-      - main
+      - noname
       {{ if and .Parameters.trust.enabled }}
       - trust
       {{ end }}

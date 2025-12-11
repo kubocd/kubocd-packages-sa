@@ -2,7 +2,7 @@
 
 apiVersion: v1alpha1
 name: redis
-tag: 20.6.1-p01
+tag: 24.0.0-p01
 description: Redis and a front UI
 templateHeader: | 
   {{- $uiHost :=  .Parameters.commander.host | default (printf "%s-%s-ui" .Release.metadata.name .Release.metadata.namespace) -}}
@@ -33,13 +33,13 @@ schema:
           clusterIssuer: { type: string }
           domain: { type: string, required: true }
 modules:
-  - name: redis
+  - name: noname
     source:
       oci:
         repository: registry-1.docker.io/bitnamicharts/redis
-        tag: 20.6.1
+        tag: 24.0.0
     values: |
-      fullnameOverride: {{ .Release.metadata.name }}
+      #fullnameOverride: {{ .Release.metadata.name }}
       global:
         redis:
           password: {{ .Parameters.redis.password }}
@@ -91,7 +91,7 @@ modules:
               - {{ $uiHost }}.{{.Context.ingress.domain}}
         {{- end }}
     dependsOn:
-      - redis
+      - noname
 roles: |
   - redis
   {{ if .Parameters.commander.enabled }}

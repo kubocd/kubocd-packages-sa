@@ -1,9 +1,20 @@
 
 apiVersion: v1alpha1
 name: metallb
-tag: 0.14.9-p01
+tag: 0.14.9-p02
 protected: true
 schema:
+  parameters:
+    properties:
+      deployInControlPlane: { type: boolean, default: false }
+      speakerTolerations:
+        items:
+          properties:
+            key: { type: string, required: true }
+            operator: { type: string, required: true }
+            effect: { type: string, required: false }
+            value: { type: string, required: false }
+            tolerationSeconds: { type: integer, required: false }
   context:
     properties:
       # One of cluster.domain or metallb.pool must be defined. If both, metallb pool take precedence
@@ -20,7 +31,7 @@ schema:
               first: { type: string, required: true }
               last: { type: string, required: true }
 modules:
-  - name: main
+  - name: noname
     timeout: 4m
     source:
       helmRepository:
@@ -29,10 +40,28 @@ modules:
         version: 0.14.9
     values: |
       controller:
+        {{- if .Parameters.deployInControlPlane }}
+        tolerations:
+          - key: "node-role.kubernetes.io/control-plane"
+            operator: "Exists"
+            effect: "NoSchedule"
+        nodeSelector:
+          node-role.kubernetes.io/control-plane: ""
+        {{- end }}      
         image:
           {{ $redirection := imageRedirect "quay.io/metallb/controller" . }}
           repository: {{ $redirection.repository }}
       speaker:
+        {{- with .Parameters.speakerTolerations }}
+        tolerations:
+        {{- range . }}
+          - key: {{ .key }}
+            operator: {{ .operator }}
+            {{ with .effect }}effect: {{.}}{{end}}
+            {{ with .value }}value: {{.}}{{end}}
+            {{ with .tolerationSeconds }}tolerationSeconds: {{.}}{{end}}
+        {{- end }}
+        {{- end }}
         image:
           {{ $redirection := imageRedirect "quay.io/metallb/speaker" . }}
           repository: {{ $redirection.repository }}
@@ -57,6 +86,6 @@ modules:
         {{ fail "At least one of .Context.metallb.pool or .Context.cluster.domain must be defined" }} 
       {{- end }}
     dependsOn:
-      - main
+      - noname
 roles:
   - loadBalancer

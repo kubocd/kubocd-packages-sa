@@ -10,6 +10,6 @@ Create the name of the user namespace
 Create the name of the system namespace
 */}}
 {{- define "sysNamespace" -}}
-{{- printf "%s-sys" .Values.baseNamespace }}
+{{- printf "%s-system" .Values.baseNamespace }}
 {{- end }}
 

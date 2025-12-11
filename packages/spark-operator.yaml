@@ -1,6 +1,6 @@
 apiVersion: v1alpha1
 name: spark-operator
-tag: 2.4.0-p01
+tag: 2.4.0-p02
 protected: false
 description: |
   Spark Operator 2.4.0 - Kubernetes operator for managing Apache Spark applications
@@ -70,11 +70,23 @@ schema:
         type: boolean
         default: true
         description: "Enable admission webhook for validation and mutation"
+      tolerations:
+        items:
+          properties:
+            key: { type: string, required: true }
+            operator: { type: string, required: true }
+            effect: { type: string, required: false }
+            value: { type: string, required: false }
+            tolerationSeconds: { type: integer, required: false }
+      nodeSelector:
+        properties: {}
+        additionalProperties: true
+
   context:
     properties: {}
 
 modules:
-  - name: main
+  - name: noname
     timeout: 10m
     source:
       helmRepository:
@@ -97,15 +109,47 @@ modules:
       controller:
         rbac:
           createRole: true
-
         podSecurityContext:
           fsGroup: null
+        {{- with .Parameters.tolerations }}
+        tolerations:
+        {{- range . }}
+          - key: {{ .key }}
+            operator: {{ .operator }}
+            {{ with .effect }}effect: {{.}}{{end}}
+            {{ with .value }}value: {{.}}{{end}}
+            {{ with .tolerationSeconds }}tolerationSeconds: {{.}}{{end}}
+        {{- end }}
+        {{- end }}
+        {{- with .Parameters.nodeSelector }}
+        nodeSelector:
+        {{- range $k, $v := . }}
+          {{ $k }}: {{ $v }}
+        {{- end }}
+        {{- end }}
 
       # Webhook configuration
       webhook:
         enable: {{ .Parameters.webhookEnabled }}  # enable:, not enabled in helm chart
         podSecurityContext:
           fsGroup: null
+        {{- with .Parameters.tolerations }}
+        tolerations:
+        {{- range . }}
+          - key: {{ .key }}
+            operator: {{ .operator }}
+            {{ with .effect }}effect: {{.}}{{end}}
+            {{ with .value }}value: {{.}}{{end}}
+            {{ with .tolerationSeconds }}tolerationSeconds: {{.}}{{end}}
+        {{- end }}
+        {{- end }}
+        {{- with .Parameters.nodeSelector }}
+        nodeSelector:
+        {{- range $k, $v := . }}
+          {{ $k }}: {{ $v }}
+        {{- end }}
+        {{- end }}
+
 
       # Spark application configuration
       spark:

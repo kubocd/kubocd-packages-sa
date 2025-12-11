@@ -1,7 +1,7 @@
 
 apiVersion: v1alpha1
 name: openldap
-tag: 4.3.3-p01
+tag: 4.3.3-p02
 protected: true
 schema:
   parameters:
@@ -16,6 +16,17 @@ schema:
         properties:
           user: { type: string, default: admin }
           password: { type: string, required: true }
+      tolerations:
+        items:
+          properties:
+            key: { type: string, required: true }
+            operator: { type: string, required: true }
+            effect: { type: string, required: false }
+            value: { type: string, required: false }
+            tolerationSeconds: { type: integer, required: false }
+      nodeSelector:
+        properties: {}
+        additionalProperties: true
       adminIngressHost: { type: string, default: phpldapadmin }
       ldapIngressHost: { type: string, default: ldap }
       customLdifFiles:
@@ -37,7 +48,7 @@ schema:
         properties:
           domain: { type: string, required: true }
 modules:
-  - name: main
+  - name: noname
     timeout: 4m
     source:
       local:
@@ -70,12 +81,45 @@ modules:
               - hosts:
                   - {{ .Parameters.adminIngressHost }}.{{ .Context.ingress.domain }}
                 secretName: phpldapadmin-tls
+          {{- with .Parameters.tolerations }}
+          tolerations:
+          {{- range . }}
+            - key: {{ .key }}
+              operator: {{ .operator }}
+              {{ with .effect }}effect: {{.}}{{end}}
+              {{ with .value }}value: {{.}}{{end}}
+              {{ with .tolerationSeconds }}tolerationSeconds: {{.}}{{end}}
+          {{- end }}
+          {{- end }}
+          {{- with .Parameters.nodeSelector }}
+          nodeSelector:
+          {{- range $k, $v := . }}
+            {{ $k }}: {{ $v }}
+          {{- end }}
+          {{- end }}
         service:
           {{ $ldap := printf "%s.%s" .Parameters.ldapIngressHost .Context.cluster.domain }}
           annotations:
             metallb.universe.tf/loadBalancerIPs: {{ resolveDNS $ldap }}
           hosts:
             - {{ $ldap }}
+        {{- with .Parameters.tolerations }}
+        tolerations:
+        {{- range . }}
+          - key: {{ .key }}
+            operator: {{ .operator }}
+            {{ with .effect }}effect: {{.}}{{end}}
+            {{ with .value }}value: {{.}}{{end}}
+            {{ with .tolerationSeconds }}tolerationSeconds: {{.}}{{end}}
+        {{- end }}
+        {{- end }}
+        {{- with .Parameters.nodeSelector }}
+        nodeSelector:
+        {{- range $k, $v := . }}
+          {{ $k }}: {{ $v }}
+        {{- end }}
+        {{- end }}
+      
         # Custom openldap configuration files used to override default settings
         # DO NOT FORGET to put the Root Organisation object as it won't be created while using customLdifFiles
         # To generate passwords: 'slappasswd -s myPassword' on an ldap node

@@ -1,7 +1,7 @@
 
 
 apiVersion: v1alpha1
-name: weboidc
+name: weboidc-kubauth
 tag: 0.1.0-p01
 schema:
   parameters:
@@ -16,8 +16,8 @@ schema:
       oidc:
         required: true
         properties:
-          clientId: { type: string, required: true }
           clientSecret: { type: string, required: true }
+          clientSecretHash: { type: string, required: true }
   context:
     properties:
       ingress:
@@ -35,6 +35,7 @@ schema:
           public: { type: string, required: true }
       networkPolicies: { type: boolean, required: true }
 modules:
+
   - name: noname
     source:
       oci:
@@ -55,19 +56,41 @@ modules:
         certificateIssuer: {{ .Context.certificateIssuer.public }}
       oidc:
         clientId:
-          value: {{ .Parameters.oidc.clientId }}
+          value: {{ .Release.metadata.namespace}}-{{.Release.metadata.name }}
         clientSecret:
           value: {{ .Parameters.oidc.clientSecret }}
         issuerUrl: {{ .Context.oidc.issuerURL}}
-        scopes:
-          - profile
-          - openid
-          - groups
-          - email
+        scopes: [ "openid", "offline", "profile", "groups", "email"]
         ca:
           secret:
             name: certs-bundle
             key: ca.crt
+
+  - name: client
+    source:
+      local:
+        path: ../charts/wrapper/1.0.0
+    values:
+      body: |
+        apiVersion: kubauth.kubotal.io/v1alpha1
+        kind: OidcClient
+        metadata:
+          name: {{ .Release.metadata.namespace}}-{{.Release.metadata.name}}
+          namespace: kubauth-oidc
+        spec:
+          accessTokenLifespan: 1h0m0s
+          description: A first test OIDC client application
+          displayName: Weboidc (1)
+          entryURL: https:{{ .Parameters.host}}.{{.Context.ingress.domain}}
+          grantTypes: [ "refresh_token", "authorization_code" ]
+          hashedSecret: {{ .Parameters.oidc.clientSecretHash }}
+          idTokenLifespan: 1h0m0s
+          public: false
+          redirectURIs:
+            - https://{{ .Parameters.host}}.{{.Context.ingress.domain}}/wo_callback
+          refreshTokenLifespan: 1h0m0s
+          responseTypes: ["id_token", "code", "token", "id_token token", "code id_token", "code token", "code id_token token"]
+          scopes: [ "openid", "offline", "profile", "groups", "email"]
 
 dependencies: |
   - ingress
