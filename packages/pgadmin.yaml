@@ -23,7 +23,7 @@ schema:
           domain: { type: string, required: true }
 
 modules:
-  - name: main
+  - name: noname
     source:
       helmRepository:
         url: https://helm.runix.net

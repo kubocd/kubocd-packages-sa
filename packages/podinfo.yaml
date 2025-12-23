@@ -25,7 +25,7 @@ usage:
   html: |
     Podinfo can be accessed using <a href="{{if .Parameters.tls}}https{{else}}http{{end}}://{{ $uiHost }}.{{ .Context.ingress.domain }}">this link</a>
 modules:
-  - name: main
+  - name: noname
     source:
       helmRepository:
         url: https://stefanprodan.github.io/podinfo

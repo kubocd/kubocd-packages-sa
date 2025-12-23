@@ -17,7 +17,7 @@ schema:
         properties:
           public: { type: string, required: true }
 modules:
-  - name: main
+  - name: noname
     source:
       git:
         url: https://github.com/argoproj/argo-helm

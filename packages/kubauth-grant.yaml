@@ -75,7 +75,7 @@ schema:
             refreshTokenLifespan: { type: string }
             idTokenLifespan: { type: string }
 modules:
-  - name: main
+  - name: noname
     source:
       oci:
         repository: quay.io/kubauth/charts/kubauth-grant

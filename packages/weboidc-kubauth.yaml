@@ -81,7 +81,7 @@ modules:
           accessTokenLifespan: 1h0m0s
           description: A first test OIDC client application
           displayName: Weboidc (1)
-          entryURL: https:{{ .Parameters.host}}.{{.Context.ingress.domain}}
+          entryURL: https://{{ .Parameters.host}}.{{.Context.ingress.domain}}
           grantTypes: [ "refresh_token", "authorization_code" ]
           hashedSecret: {{ .Parameters.oidc.clientSecretHash }}
           idTokenLifespan: 1h0m0s

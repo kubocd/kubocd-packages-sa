@@ -8,7 +8,7 @@ description: |
   database cluster with a primary/standby architecture, using native streaming replication.
 protected: true
 modules:
-  - name: main
+  - name: noname
     source:
       helmRepository:
         url: https://cloudnative-pg.github.io/charts

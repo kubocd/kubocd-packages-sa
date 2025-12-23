@@ -26,7 +26,7 @@ schema:
             description: "List of OIDC groups which will be impersonated in 'service' account on the Argo workflow server."
             items: { type: string }
 modules:
-  - name: main
+  - name: noname
     source:
       local:
         path: ../charts/spark-workspace/0.1.0

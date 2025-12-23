@@ -39,7 +39,7 @@ schema:
               properties: {}
 
 modules:
-  - name: main
+  - name: noname
     source:
       helmRepository:
         url: https://charts.dexidp.io
