@@ -1,6 +1,8 @@
 
 baseNamespace: # TBD
 
+createNamespace: true
+
 
 serviceAccountName: spark
 roleName: spark

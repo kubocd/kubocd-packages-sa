@@ -12,7 +12,15 @@ rules:
       - configmaps
       - persistentvolumeclaims
       - secrets
-    verbs: ["*"]
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - delete
+      - deletecollection
+      - patch
+      - update
   - apiGroups: [""]
     resources: [ "pods/log" ]
     verbs: [ "get", "list" ]
@@ -22,7 +30,15 @@ rules:
 {{ if .Values.kubernetesJobs.manage }}
   - apiGroups: [ "batch"]
     resources: ["jobs", "cronjobs"]
-    verbs: ["*"]
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - delete
+      - deletecollection
+      - patch
+      - update
 {{ end }}
 {{ if .Values.workflow.manage }}
   - apiGroups: [ "argoproj.io" ]
