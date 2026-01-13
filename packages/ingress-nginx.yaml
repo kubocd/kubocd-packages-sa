@@ -8,6 +8,7 @@ schema:
   parameters:
     properties:
       deployInControlPlane: { type: boolean, default: false }
+      deployInServicePlane: { type: boolean, default: false }
   context:
     properties:
       ingress:
@@ -38,6 +39,15 @@ modules:
         nodeSelector:
           node-role.kubernetes.io/control-plane: ""
         {{- end }}
+        {{- if .Parameters.deployInServicePlane }}
+        tolerations:
+          - key: node-role.kubernetes.io
+            operator: "Equal"
+            effect: NoSchedule
+            value: services
+        nodeSelector:
+          node-role.kubernetes.io: "services"
+        {{- end }}
         image:
           image: ingress-nginx/controller
         service:
@@ -65,6 +75,15 @@ modules:
           nodeSelector:
             node-role.kubernetes.io/control-plane: ""
           {{- end }}
+          {{- if .Parameters.deployInServicePlane }}
+          tolerations:
+            - key: node-role.kubernetes.io
+              operator: "Equal"
+              effect: NoSchedule
+              value: services
+          nodeSelector:
+            node-role.kubernetes.io: "services"
+          {{- end }}
           image:
              {{ $redirection := imageRedirect "registry.k8s.io/ingress-nginx/kube-webhook-certgen" . }}
             image: {{ $redirection.baseRepository }}
@@ -77,6 +96,15 @@ modules:
             effect: "NoSchedule"
         nodeSelector:
           node-role.kubernetes.io/control-plane: ""
+        {{- end }}
+        {{- if .Parameters.deployInServicePlane }}
+        tolerations:
+          - key: node-role.kubernetes.io
+            operator: "Equal"
+            effect: NoSchedule
+            value: services
+        nodeSelector:
+          node-role.kubernetes.io: "services"
         {{- end }}
         image:
           {{ $redirection := imageRedirect "registry.k8s.io/defaultbackend-amd64" . }}

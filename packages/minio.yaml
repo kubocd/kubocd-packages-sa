@@ -6,6 +6,8 @@ protected: true
 schema:
   parameters:
     properties:
+      deployInControlPlane: { type: boolean, default: false }
+      deployInServicePlane: { type: boolean, default: false }
       rootUser: { type: string, required: true }
       rootPassword: { type: string, required: true }
       storage:
@@ -17,17 +19,6 @@ schema:
           drivesPerNode: { type: integer, enum: [ 1, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56 ], default: 1 }
           replicas: { type: integer, enum: [ 1, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56 ], default: 1 }
           pools: { type: integer, default: 1 }
-      tolerations:
-        items:
-          properties:
-            key: { type: string, required: true }
-            operator: { type: string, required: true }
-            effect: { type: string, required: false }
-            value: { type: string, required: false }
-            tolerationSeconds: { type: integer, required: false }
-      nodeSelector:
-        properties: {}
-        additionalProperties: true
       ingresses:
         properties:
           passThrough:
@@ -95,22 +86,6 @@ modules:
       minio:
         rootUser: {{ .Parameters.rootUser }} 
         rootPassword: {{ .Parameters.rootPassword }} 
-        {{- with .Parameters.tolerations }}
-        tolerations:
-        {{- range . }}
-          - key: {{ .key }}
-            operator: {{ .operator }}
-            {{ with .effect }}effect: {{.}}{{end}}
-            {{ with .value }}value: {{.}}{{end}}
-            {{ with .tolerationSeconds }}tolerationSeconds: {{.}}{{end}}
-        {{- end }}
-        {{- end }}
-        {{- with .Parameters.nodeSelector }}
-        nodeSelector:
-        {{- range $k, $v := . }}
-          {{ $k }}: {{ $v }}
-        {{- end }}
-        {{- end }}
         clusterIssuer: {{ .Context.certificateIssuer.internal }}
         tls:
           enabled: true
@@ -122,6 +97,23 @@ modules:
         replicas: {{ .Parameters.storage.replicas }}
         pools: {{ .Parameters.storage.pools }}
         mode: {{ if ne .Parameters.storage.replicas 1.0 }}distributed{{else}}standalone{{end}}
+        {{- if .Parameters.deployInControlPlane }}
+        tolerations:
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoSchedule"
+        nodeSelector:
+          node-role.kubernetes.io/control-plane: ""
+        {{- end }}
+        {{- if .Parameters.deployInServicePlane }}
+        tolerations:
+          - key: node-role.kubernetes.io
+            operator: "Equal"
+            effect: NoSchedule
+            value: services
+        nodeSelector:
+          node-role.kubernetes.io: "services"
+        {{- end }}
         ingress:
           enabled: {{ .Parameters.ingresses.passThrough.enabled }}
           hosts:

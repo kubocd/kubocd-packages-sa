@@ -7,6 +7,8 @@ schema:
   parameters:
     properties:
       projectId:  { type: string, required: true }
+      deployInControlPlane: { type: boolean, default: false }
+      deployInServicePlane: { type: boolean, default: false }
       serviceAccountName: { type: string, default: "spark"}
       roleName: { type: string, default: "spark"}
       kubernetesJobs:
@@ -31,19 +33,7 @@ schema:
           metricsEnabled: { type: boolean, default: true, description: "Enable Prometheus metrics" }
           podMonitorEnabled: { type: boolean, default: false, description: "Create PodMonitor for metrics collection" }
           webhookEnabled: { type: boolean, default: true, description: "Enable admission webhook for validation and mutation" }
-      system:
-        properties:
-          tolerations:
-            items:
-              properties:
-                key: { type: string, required: true }
-                operator: { type: string, required: true }
-                effect: { type: string, required: false }
-                value: { type: string, required: false }
-                tolerationSeconds: { type: integer, required: false }
-          nodeSelector:
-            properties: {}
-            additionalProperties: true
+
 
 modules:
   - name: workspace
@@ -64,6 +54,7 @@ modules:
       workflow:
         manage: {{ .Parameters.workflow.enabled }}
         guiOidcGroups: {{ .Parameters.workflow.guiOidcGroups | default (list) | toJson }}
+
   - name: spark-operator
     enabled: "{{ .Parameters.sparkOperator.enabled }}"
     targetNamespace: "{{ .Parameters.projectId }}-system"
@@ -91,45 +82,45 @@ modules:
           createRole: true
         podSecurityContext:
           fsGroup: null
-        {{- with .Parameters.system.tolerations }}
+        {{- if .Parameters.deployInControlPlane }}
         tolerations:
-        {{- range . }}
-          - key: {{ .key }}
-            operator: {{ .operator }}
-            {{ with .effect }}effect: {{.}}{{end}}
-            {{ with .value }}value: {{.}}{{end}}
-            {{ with .tolerationSeconds }}tolerationSeconds: {{.}}{{end}}
-        {{- end }}
-        {{- end }}
-        {{- with .Parameters.system.nodeSelector }}
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoSchedule"
         nodeSelector:
-        {{- range $k, $v := . }}
-          {{ $k }}: {{ $v }}
+          node-role.kubernetes.io/control-plane: ""
         {{- end }}
+        {{- if .Parameters.deployInServicePlane }}
+        tolerations:
+          - key: node-role.kubernetes.io
+            operator: "Equal"
+            effect: NoSchedule
+            value: services
+        nodeSelector:
+          node-role.kubernetes.io: "services"
         {{- end }}
-      
       # Webhook configuration
       webhook:
         enable: {{ .Parameters.sparkOperator.webhookEnabled }}  # 'enable':, not 'enabled' in helm chart
         podSecurityContext:
           fsGroup: null
-        {{- with .Parameters.system.tolerations }}
+        {{- if .Parameters.deployInControlPlane }}
         tolerations:
-        {{- range . }}
-          - key: {{ .key }}
-            operator: {{ .operator }}
-            {{ with .effect }}effect: {{.}}{{end}}
-            {{ with .value }}value: {{.}}{{end}}
-            {{ with .tolerationSeconds }}tolerationSeconds: {{.}}{{end}}
-        {{- end }}
-        {{- end }}
-        {{- with .Parameters.system.nodeSelector }}
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoSchedule"
         nodeSelector:
-        {{- range $k, $v := . }}
-          {{ $k }}: {{ $v }}
+          node-role.kubernetes.io/control-plane: ""
         {{- end }}
+        {{- if .Parameters.deployInServicePlane }}
+        tolerations:
+          - key: node-role.kubernetes.io
+            operator: "Equal"
+            effect: NoSchedule
+            value: services
+        nodeSelector:
+          node-role.kubernetes.io: "services"
         {{- end }}
-
       # Spark application configuration
       spark:
         # List of namespaces where to run spark jobs

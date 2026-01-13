@@ -11,6 +11,7 @@ schema:
     properties:
       replicaCount: { type: integer, default: 2 }
       deployInControlPlane: { type: boolean, default: true }
+      deployInServicePlane: { type: boolean, default: true }
 modules:
   - name: noname
     source:
@@ -25,6 +26,15 @@ modules:
       webhook:
         replicaCount: {{ .Parameters.replicaCount }}
         deployInControlPlane: {{ .Parameters.deployInControlPlane }}
+        {{- if .Parameters.deployInServicePlane }}
+        tolerations:
+          - key: node-role.kubernetes.io
+            operator: "Equal"
+            effect: NoSchedule
+            value: services
+        nodeSelector:
+          node-role.kubernetes.io: "services"
+        {{- end }}
         logger:
           mode: dev
           level: debug

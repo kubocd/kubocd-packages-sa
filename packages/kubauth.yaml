@@ -11,17 +11,7 @@ schema:
           mode: { type: string, default: text, enum: [ "text", "json"], description: "Log format. Apply to all module" }
           level: { type: string, default: info, enum: [ "error", "info", "debug", "trace"], description: "Default log level for all modules" }
       deployInControlPlane: { type: boolean, default: false }
-      tolerations:
-        items:
-          properties:
-            key: { type: string, required: true }
-            operator: { type: string, required: true }
-            effect: { type: string, required: false }
-            value: { type: string, required: false }
-            tolerationSeconds: { type: integer, required: false }
-      nodeSelector:
-        properties: {}
-        additionalProperties: true
+      deployInServicePlane: { type: boolean, default: false }
       oidc:
         properties:
           logger:
@@ -114,21 +104,14 @@ modules:
         tag: 0.1.2-snapshot
     values: |
       deployInControlPlane: {{ .Parameters.deployInControlPlane }}
-      {{- with .Parameters.tolerations }}
+      {{- if .Parameters.deployInServicePlane }}
       tolerations:
-      {{- range . }}
-        - key: {{ .key }}
-          operator: {{ .operator }}
-          {{ with .effect }}effect: {{.}}{{end}}
-          {{ with .value }}value: {{.}}{{end}}
-          {{ with .tolerationSeconds }}tolerationSeconds: {{.}}{{end}}
-      {{- end }}
-      {{- end }}
-      {{- with .Parameters.nodeSelector }}
+        - key: node-role.kubernetes.io
+          operator: "Equal"
+          effect: NoSchedule
+          value: services
       nodeSelector:
-      {{- range $k, $v := . }}
-        {{ $k }}: {{ $v }}
-      {{- end }}
+        node-role.kubernetes.io: "services"
       {{- end }}
       networkPolicies:
         forWebhooks: true

@@ -7,6 +7,7 @@ schema:
   parameters:
     properties:
       deployInControlPlane: { type: boolean, default: false }
+      deployInServicePlane: { type: boolean, default: false }
       speakerTolerations:
         items:
           properties:
@@ -48,6 +49,15 @@ modules:
         nodeSelector:
           node-role.kubernetes.io/control-plane: ""
         {{- end }}      
+        {{- if .Parameters.deployInServicePlane }}
+        tolerations:
+          - key: node-role.kubernetes.io
+            operator: "Equal"
+            effect: NoSchedule
+            value: services
+        nodeSelector:
+          node-role.kubernetes.io: "services"
+        {{- end }}
         image:
           {{ $redirection := imageRedirect "quay.io/metallb/controller" . }}
           repository: {{ $redirection.repository }}

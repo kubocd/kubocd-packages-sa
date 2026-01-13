@@ -53,6 +53,8 @@ usage:
 schema:
   parameters:
     properties:
+      deployInControlPlane: { type: boolean, default: false }
+      deployInServicePlane: { type: boolean, default: false }
       jobNamespaces:
         type: array
         items:
@@ -70,17 +72,6 @@ schema:
         type: boolean
         default: true
         description: "Enable admission webhook for validation and mutation"
-      tolerations:
-        items:
-          properties:
-            key: { type: string, required: true }
-            operator: { type: string, required: true }
-            effect: { type: string, required: false }
-            value: { type: string, required: false }
-            tolerationSeconds: { type: integer, required: false }
-      nodeSelector:
-        properties: {}
-        additionalProperties: true
 
   context:
     properties: {}
@@ -111,46 +102,48 @@ modules:
           createRole: true
         podSecurityContext:
           fsGroup: null
-        {{- with .Parameters.tolerations }}
+
+        {{- if .Parameters.deployInControlPlane }}
         tolerations:
-        {{- range . }}
-          - key: {{ .key }}
-            operator: {{ .operator }}
-            {{ with .effect }}effect: {{.}}{{end}}
-            {{ with .value }}value: {{.}}{{end}}
-            {{ with .tolerationSeconds }}tolerationSeconds: {{.}}{{end}}
-        {{- end }}
-        {{- end }}
-        {{- with .Parameters.nodeSelector }}
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoSchedule"
         nodeSelector:
-        {{- range $k, $v := . }}
-          {{ $k }}: {{ $v }}
+          node-role.kubernetes.io/control-plane: ""
         {{- end }}
+        {{- if .Parameters.deployInServicePlane }}
+        tolerations:
+          - key: node-role.kubernetes.io
+            operator: "Equal"
+            effect: NoSchedule
+            value: services
+        nodeSelector:
+          node-role.kubernetes.io: "services"
         {{- end }}
+
 
       # Webhook configuration
       webhook:
         enable: {{ .Parameters.webhookEnabled }}  # enable:, not enabled in helm chart
         podSecurityContext:
           fsGroup: null
-        {{- with .Parameters.tolerations }}
+        {{- if .Parameters.deployInControlPlane }}
         tolerations:
-        {{- range . }}
-          - key: {{ .key }}
-            operator: {{ .operator }}
-            {{ with .effect }}effect: {{.}}{{end}}
-            {{ with .value }}value: {{.}}{{end}}
-            {{ with .tolerationSeconds }}tolerationSeconds: {{.}}{{end}}
-        {{- end }}
-        {{- end }}
-        {{- with .Parameters.nodeSelector }}
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoSchedule"
         nodeSelector:
-        {{- range $k, $v := . }}
-          {{ $k }}: {{ $v }}
+          node-role.kubernetes.io/control-plane: ""
         {{- end }}
+        {{- if .Parameters.deployInServicePlane }}
+        tolerations:
+          - key: node-role.kubernetes.io
+            operator: "Equal"
+            effect: NoSchedule
+            value: services
+        nodeSelector:
+          node-role.kubernetes.io: "services"
         {{- end }}
-
-
       # Spark application configuration
       spark:
         # List of namespaces where to run spark jobs
