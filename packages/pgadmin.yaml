@@ -2,7 +2,7 @@
 # https://github.com/rowanruseler/helm-charts/tree/main/charts/pgadmin4
 apiVersion: v1alpha1
 name: pgadmin
-tag: 1.44.0-p01
+tag: 1.57.0-p01
 description: pgAdmin 4 is a web based administration tool for the PostgreSQL database
 schema:
   parameters:
@@ -10,7 +10,7 @@ schema:
       host: { type: string, default: "pgadmin" }
       tls: { type: boolean, default: true }
       user: { type: string, default: "pgadmin@pgadmin.com" }
-      password: { type: string, default: "pgadmin123" }
+      password: { type: string, default: "pgadmin" }
   context:
     properties:
       certificateIssuer:
@@ -28,7 +28,7 @@ modules:
       helmRepository:
         url: https://helm.runix.net
         chart: pgadmin4
-        version: 1.44.0
+        version: 1.57.0
     values: |
       image:
         {{ $redirection := imageRedirect "dpage/pgadmin4" . }}

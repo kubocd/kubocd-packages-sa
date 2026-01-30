@@ -28,12 +28,12 @@ modules:
         deployInControlPlane: {{ .Parameters.deployInControlPlane }}
         {{- if .Parameters.deployInServicePlane }}
         tolerations:
-          - key: node-role.kubernetes.io
+          - key: services.node-role.kubernetes.io
             operator: "Equal"
             effect: NoSchedule
             value: services
         nodeSelector:
-          node-role.kubernetes.io: "services"
+          services.node-role.kubernetes.io: "services"
         {{- end }}
         logger:
           mode: dev

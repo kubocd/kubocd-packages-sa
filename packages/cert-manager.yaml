@@ -62,12 +62,12 @@ modules:
       {{- end }}
       {{- if .Parameters.deployInServicePlane }}
       tolerations:
-        - key: node-role.kubernetes.io
+        - key: services.node-role.kubernetes.io
           operator: "Equal"
           effect: NoSchedule
           value: services
       nodeSelector:
-        node-role.kubernetes.io: "services"
+        services.node-role.kubernetes.io: "services"
       {{- end }}
       {{- if .Parameters.deployInControlPlane }}
       webhook:
@@ -81,12 +81,12 @@ modules:
       {{- if .Parameters.deployInServicePlane }}
       webhook:
         tolerations:
-          - key: node-role.kubernetes.io
+          - key: services.node-role.kubernetes.io
             operator: "Equal"
             effect: NoSchedule
             value: services
         nodeSelector:
-          node-role.kubernetes.io: "services"
+          services.node-role.kubernetes.io: "services"
       {{- end }}
       {{- if .Parameters.deployInControlPlane }}
       cainjector:
@@ -100,12 +100,12 @@ modules:
       {{- if .Parameters.deployInServicePlane }}
       cainjector:
         tolerations:
-          - key: node-role.kubernetes.io
+          - key: services.node-role.kubernetes.io
             operator: "Equal"
             effect: NoSchedule
             value: services
         nodeSelector:
-          node-role.kubernetes.io: "services"
+          services.node-role.kubernetes.io: "services"
       {{- end }}
       {{- if .Parameters.deployInControlPlane }}
       startupapicheck:
@@ -119,12 +119,12 @@ modules:
       {{- if .Parameters.deployInServicePlane }}
       startupapicheck:
         tolerations:
-          - key: node-role.kubernetes.io
+          - key: services.node-role.kubernetes.io
             operator: "Equal"
             effect: NoSchedule
             value: services
         nodeSelector:
-          node-role.kubernetes.io: "services"
+          services.node-role.kubernetes.io: "services"
       {{- end }}
 
 
@@ -147,12 +147,12 @@ modules:
       {{- end }}
       {{- if .Parameters.deployInServicePlane }}
       tolerations:
-        - key: node-role.kubernetes.io
+        - key: services.node-role.kubernetes.io
           operator: "Equal"
           effect: NoSchedule
           value: services
       nodeSelector:
-        node-role.kubernetes.io: "services"
+        services.node-role.kubernetes.io: "services"
       {{- end }}
       app:
         trust:

@@ -33,6 +33,10 @@ schema:
           metricsEnabled: { type: boolean, default: true, description: "Enable Prometheus metrics" }
           podMonitorEnabled: { type: boolean, default: false, description: "Create PodMonitor for metrics collection" }
           webhookEnabled: { type: boolean, default: true, description: "Enable admission webhook for validation and mutation" }
+          batchScheduler:
+            properties:
+              enabled: { type: boolean, default: false }
+              default: { type: string, default: "volcano", enum: ["volcano", "yunikorn"]}
 
 
 modules:
@@ -82,6 +86,9 @@ modules:
           createRole: true
         podSecurityContext:
           fsGroup: null
+        batchScheduler:
+          enable: {{ .Parameters.sparkOperator.batchScheduler.enabled }}
+          default: {{ .Parameters.sparkOperator.batchScheduler.default }}
         {{- if .Parameters.deployInControlPlane }}
         tolerations:
         - key: "node-role.kubernetes.io/control-plane"
@@ -92,12 +99,12 @@ modules:
         {{- end }}
         {{- if .Parameters.deployInServicePlane }}
         tolerations:
-          - key: node-role.kubernetes.io
+          - key: services.node-role.kubernetes.io
             operator: "Equal"
             effect: NoSchedule
             value: services
         nodeSelector:
-          node-role.kubernetes.io: "services"
+          services.node-role.kubernetes.io: "services"
         {{- end }}
       # Webhook configuration
       webhook:
@@ -114,12 +121,12 @@ modules:
         {{- end }}
         {{- if .Parameters.deployInServicePlane }}
         tolerations:
-          - key: node-role.kubernetes.io
+          - key: services.node-role.kubernetes.io
             operator: "Equal"
             effect: NoSchedule
             value: services
         nodeSelector:
-          node-role.kubernetes.io: "services"
+          services.node-role.kubernetes.io: "services"
         {{- end }}
       # Spark application configuration
       spark:

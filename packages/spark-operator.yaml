@@ -72,7 +72,10 @@ schema:
         type: boolean
         default: true
         description: "Enable admission webhook for validation and mutation"
-
+      batchScheduler:
+        properties:
+          enabled: { type: boolean, default: false }
+          default: { type: string, default: "volcano", enum: ["volcano", "yunikorn"]}
   context:
     properties: {}
 
@@ -102,7 +105,9 @@ modules:
           createRole: true
         podSecurityContext:
           fsGroup: null
-
+        batchScheduler:
+          enable: {{ .Parameters.batchScheduler.enabled }}
+          default: {{ .Parameters.batchScheduler.default }}
         {{- if .Parameters.deployInControlPlane }}
         tolerations:
         - key: "node-role.kubernetes.io/control-plane"
@@ -113,12 +118,12 @@ modules:
         {{- end }}
         {{- if .Parameters.deployInServicePlane }}
         tolerations:
-          - key: node-role.kubernetes.io
+          - key: services.node-role.kubernetes.io
             operator: "Equal"
             effect: NoSchedule
             value: services
         nodeSelector:
-          node-role.kubernetes.io: "services"
+          services.node-role.kubernetes.io: "services"
         {{- end }}
 
 
@@ -137,12 +142,12 @@ modules:
         {{- end }}
         {{- if .Parameters.deployInServicePlane }}
         tolerations:
-          - key: node-role.kubernetes.io
+          - key: services.node-role.kubernetes.io
             operator: "Equal"
             effect: NoSchedule
             value: services
         nodeSelector:
-          node-role.kubernetes.io: "services"
+          services.node-role.kubernetes.io: "services"
         {{- end }}
       # Spark application configuration
       spark:

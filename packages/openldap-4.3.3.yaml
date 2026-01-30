@@ -82,12 +82,12 @@ modules:
           {{- end }}
           {{- if .Parameters.deployInServicePlane }}
           tolerations:
-            - key: node-role.kubernetes.io
+            - key: services.node-role.kubernetes.io
               operator: "Equal"
               effect: NoSchedule
               value: services
           nodeSelector:
-            node-role.kubernetes.io: "services"
+            services.node-role.kubernetes.io: "services"
           {{- end }}
         service:
           {{ $ldap := printf "%s.%s" .Parameters.ldapIngressHost .Context.cluster.domain }}
@@ -105,12 +105,12 @@ modules:
         {{- end }}
         {{- if .Parameters.deployInServicePlane }}
         tolerations:
-          - key: node-role.kubernetes.io
+          - key: services.node-role.kubernetes.io
             operator: "Equal"
             effect: NoSchedule
             value: services
         nodeSelector:
-          node-role.kubernetes.io: "services"
+          services.node-role.kubernetes.io: "services"
         {{- end }}
         # Custom openldap configuration files used to override default settings
         # DO NOT FORGET to put the Root Organisation object as it won't be created while using customLdifFiles
