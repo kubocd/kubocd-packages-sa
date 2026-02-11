@@ -1,0 +1,43 @@
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ include "seaweed.baseName" . }}-db
+  namespace: {{ .Release.Namespace }}
+spec:
+  instances: 1
+  storage:
+    size: {{ .Values.storageSize }}
+
+  affinity:
+    {{- with .Values.nodeSelector }}
+    nodeSelector:
+      {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+    tolerations:
+      {{- toYaml . | nindent 8 }}
+    {{- end }}
+
+  bootstrap:
+    initdb:
+      database: seaweed
+      owner: seaweed
+      secret:
+        name: {{ include "seaweed.baseName" . }}-db-app
+      # Runs on the *application database* ("seaweed") after it’s created
+      postInitApplicationSQL:
+        - |
+          CREATE TABLE IF NOT EXISTS filemeta (
+            dirhash     BIGINT,
+            name        VARCHAR(65535),
+            directory   VARCHAR(65535),
+            meta        bytea,
+            PRIMARY KEY (dirhash, name)
+          );
+        - |
+          ALTER TABLE public.filemeta OWNER TO seaweed;
+        - |
+          GRANT USAGE ON SCHEMA public TO seaweed;
+        - |
+          GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.filemeta TO seaweed;

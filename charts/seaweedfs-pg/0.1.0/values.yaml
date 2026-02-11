@@ -1,0 +1,12 @@
+
+baseName: seaweed
+
+username: seaweed
+password: seaweed
+
+storageSize: "20Gi"
+
+# NodeSelector for the db server instance
+nodeSelector: {}
+# -- Tolerations for the db server instance
+tolerations: []

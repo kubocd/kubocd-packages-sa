@@ -1,0 +1,232 @@
+
+apiVersion: v1alpha1
+name: seaweedfs
+tag: 4.07-p01
+description: |
+  SeaweedFS is a fast distributed storage system for blobs, objects, files, and data lake, for billions of files!
+protected: true
+
+schema:
+  parameters:
+    properties:
+      baseName: { type: string }
+      deployInServicePlane: { type: boolean, default: false }
+      storageSize: { type: string, default: "20Gi" }
+      db:
+        properties:
+          username: { type: string, default: "seaweed" }
+          password: { type: string, default: "seaweed123" }
+          storageSize: { type: string, default: "10Gi" }
+  context:
+    properties:
+      certificateIssuer:
+        required: true
+        properties:
+          public: { type: string, required: true }
+      storageClass:
+        required: true
+        properties:
+          data: { type: string, required: true }
+          workspace: { type: string, required: true }
+      ingress:
+        required: true
+        properties:
+          domain: { type: string, required: true }
+
+
+
+templateHeader: |
+  {{ $baseName := .Parameters.baseName | default .Release.metadata.name }}
+
+modules:
+
+  - name: pg
+    source:
+      local:
+        path: ../charts/seaweedfs-pg/0.1.0
+    Values: |
+      baseName: "{{ $baseName }}"
+      username: "{{ .Parameters.db.username }}"
+      password: "{{ .Parameters.db.password }}"
+      storageSize: "{{ .Parameters.db.storageSize }}"
+      {{ if .Parameters.deployInServicePlane }}
+      tolerations:
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoSchedule"
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: ""
+      {{ end }}
+
+  - name: noname
+    source:
+      local:
+        path:  ../../../forks/seaweedfs/k8s/charts/seaweedfs/
+    dependsOn:
+      - pg
+    values: |
+      nameOverride: "{{ $baseName }}"
+
+      master:
+        replicas: 1
+        data:
+          type: persistentVolumeClaim
+          size: 2Gi
+          storageClass: "{{ .Context.storageClass.data }}"
+        logs:
+          type: persistentVolumeClaim
+          size: 2Gi
+          storageClass: "{{ .Context.storageClass.workspace }}"
+        ingress:
+          enabled: true
+          className: nginx
+          host: "master.{{ $baseName }}.{{ .Context.ingress.domain }}"
+          #    path: "/sw-master/?(.*)"
+          #    pathType: ImplementationSpecific
+          path: "/"
+          pathType: Prefix
+          annotations:
+            cert-manager.io/cluster-issuer: "{{ .Context.certificateIssuer.public }}"
+          tls:
+            - hosts:
+                - "master.{{ $baseName }}.{{ .Context.ingress.domain }}"
+              secretName: "master-{{ $baseName }}-tls"
+          {{ if .Parameters.deployInServicePlane }}
+          tolerations: |
+            - key: "node-role.kubernetes.io/control-plane"
+              operator: "Exists"
+              effect: "NoSchedule"
+          nodeSelector: |
+            node-role.kubernetes.io/control-plane: ""
+          {{ end }}
+
+      volume:
+        replicas: 1
+        # Example: if your chart uses dataDirs (it does, per the chart issue excerpts)
+        dataDirs:
+          - name: data1
+            type: persistentVolumeClaim
+            size: "{{ .Parameters.storageSize }}"
+            storageClass: "{{ .Context.storageClass.data }}"
+            maxVolumes: 0
+        {{ if .Parameters.deployInServicePlane }}
+        tolerations: |
+          - key: "node-role.kubernetes.io/control-plane"
+            operator: "Exists"
+            effect: "NoSchedule"
+        nodeSelector: |
+          node-role.kubernetes.io/control-plane: ""
+        {{ end }}
+
+      filer:
+        replicas: 1
+        # Pass extra args (supported by chart) :contentReference[oaicite:6]{index=6}
+        extraArgs: []
+        # Mount the filer.toml from ConfigMap
+        extraVolumes: |
+          - name: filer-config
+            configMap:
+              name: {{ $baseName }}-filer-config
+        extraVolumeMounts: |
+          - name: filer-config
+            mountPath: /etc/seaweedfs/filer.toml
+            subPath: filer.toml
+            readOnly: true
+        # Inject credentials as env vars from a Secret (supported by chart) :contentReference[oaicite:7]{index=7}
+        secretExtraEnvironmentVars:
+          WEED_POSTGRES_USERNAME:
+            secretKeyRef:
+              name: "{{ $baseName }}-db-app"
+              key: username
+          WEED_POSTGRES_PASSWORD:
+            secretKeyRef:
+              name: "{{ $baseName }}-db-app"
+              key: password
+        extraEnvironmentVars:
+          WEED_LEVELDB2_ENABLED: "false"
+        data:
+          type: persistentVolumeClaim
+          size: 2Gi
+          storageClass: "{{ .Context.storageClass.data }}"
+        logs:
+          type: persistentVolumeClaim
+          size: 2Gi
+          storageClass: "{{ .Context.storageClass.workspace }}"
+        ingress:
+          enabled: true
+          className: nginx
+          host: "filer.{{ $baseName }}.{{ .Context.ingress.domain }}"
+          #    path: "/sw-filer/?(.*)"
+          #    pathType: ImplementationSpecific
+          path: "/"
+          pathType: Prefix
+          annotations:
+            cert-manager.io/cluster-issuer: "{{ .Context.certificateIssuer.public }}"
+          tls:
+            - hosts:
+                - "filer.{{ $baseName }}.{{ .Context.ingress.domain }}"
+              secretName: "filer-{{ $baseName }}-tls"
+        {{ if .Parameters.deployInServicePlane }}
+        tolerations: |
+          - key: "node-role.kubernetes.io/control-plane"
+            operator: "Exists"
+            effect: "NoSchedule"
+        nodeSelector: |
+          node-role.kubernetes.io/control-plane: ""
+        {{ end }}
+
+      s3:
+        enabled: true
+        ingress:
+          enabled: true
+          className: nginx
+          host: "s3.{{ $baseName }}.{{ .Context.ingress.domain }}"
+          annotations:
+            cert-manager.io/cluster-issuer: "{{ .Context.certificateIssuer.public }}"
+          tls:
+            - hosts:
+                - "s3.{{ $baseName }}.{{ .Context.ingress.domain }}"
+              secretName: "s3-{{ $baseName }}-tls"
+        {{ if .Parameters.deployInServicePlane }}
+        tolerations: |
+          - key: "node-role.kubernetes.io/control-plane"
+            operator: "Exists"
+            effect: "NoSchedule"
+        nodeSelector: |
+          node-role.kubernetes.io/control-plane: ""
+        {{ end }}
+
+
+      admin:
+        enabled: true
+        secret:
+          adminUser: admin
+          adminPassword: admin
+        data:
+          type: persistentVolumeClaim
+          size: 2Gi
+          storageClass: "{{ .Context.storageClass.data }}"
+        logs:
+          type: persistentVolumeClaim
+          size: 2Gi
+          storageClass: "{{ .Context.storageClass.workspace }}"
+        ingress:
+          enabled: true
+          host: "admin.{{ $baseName }}.{{ .Context.ingress.domain }}"
+          annotations:
+            cert-manager.io/cluster-issuer: "{{ .Context.certificateIssuer.public }}"
+          tls:
+            - hosts:
+                - "admin.{{ $baseName }}.{{ .Context.ingress.domain }}"
+              secretName: "admin-{{ $baseName }}-tls"
+        {{ if .Parameters.deployInServicePlane }}
+        tolerations: |
+          - key: "node-role.kubernetes.io/control-plane"
+            operator: "Exists"
+            effect: "NoSchedule"
+        nodeSelector: |
+          node-role.kubernetes.io/control-plane: ""
+        {{ end }}
+
+
+
