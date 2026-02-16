@@ -27,10 +27,13 @@ schema:
         required: true
         properties:
           issuerURL: { type: string, required: true }
-          issuerCaSecretName: { type: string, default: "certs-bundle"}
-          issuerCaName: { type: string, default: "ca.crt"}
           clientId: { type: string, default: "k8s" }
           clientSecret: { type: string, required: false }
+      issuerCaSecret:
+        required: true
+        properties:
+          name: { type: string, required: true }
+          key: { type: string }
 
 modules:
   - name: noname
@@ -48,8 +51,8 @@ modules:
         timeoutApiServerUp: {{ .Parameters.apiserver.timeoutApiServerUp }}
         oidc:
           issuerURL: "{{ .Context.oidc.issuerURL }}"
-          issuerCaSecretName: {{ .Context.oidc.issuerCaSecretName }}
-          issuerCaName: {{ .Context.oidc.issuerCaName }}
+          issuerCaSecretName: {{ .Context.issuerCaSecret.name }}
+          issuerCaName: {{ .Context.issuerCaSecret.key }}
           clientId: {{ .Context.oidc.clientId }}
           usernamePrefix: "{{ .Parameters.oidc.usernamePrefix }}"
           groupsPrefix: "{{ .Parameters.oidc.groupsPrefix }}"

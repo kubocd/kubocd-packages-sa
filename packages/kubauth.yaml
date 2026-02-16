@@ -25,6 +25,7 @@ schema:
               sticky: { type: boolean, default: false }
           allowPasswordGrant: { type: boolean, default: false }
           enforcePKCE: { type: boolean, default: false }
+          dumpExchanges: { type: integer, default: 0 }
 
       audit:
         properties:
@@ -123,6 +124,7 @@ modules:
         logger:
           mode: {{ .Parameters.logger.mode }}
           level: {{ .Parameters.oidc.logger.level | default .Parameters.logger.level }}
+        dumpExchanges: {{ .Parameters.oidc.dumpExchanges }}
         server:
           certificateIssuer: {{ .Context.certificateIssuer.public }}
           tls: true

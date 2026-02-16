@@ -1,0 +1,108 @@
+
+#
+# NB: There is an issue in the webhook deployment in the operator Helm chart
+#
+#  {{- $webhook := index $objectStore "webhook" | default $emptyObj -}}
+# Should be:
+#  {{- $webhook := index $operators "webhook" | default $emptyObj -}}
+#
+
+apiVersion: v1alpha1
+name: aistor-operator
+tag: 5.4.0-p01
+protected: false
+schema:
+  parameters:
+    properties:
+      license: { type: string, required: true }
+      deployInControlPlane: { type: boolean, default: false }
+      deployInServicePlane: { type: boolean, default: false }
+modules:
+  - name: noname
+    source:
+      helmRepository:
+        url:  https://helm.min.io/
+        chart: aistor-operator
+        version: 5.4.0
+
+    values: |
+      license: {{ .Parameters.license }}
+      global:
+        operator:
+      {{- if .Parameters.deployInControlPlane }}
+          tolerations:
+            - key: "node-role.kubernetes.io/control-plane"
+              operator: "Exists"
+              effect: "NoSchedule"
+      {{- end }}
+      {{- if .Parameters.deployInServicePlane }}
+          tolerations:
+            - key: services.node-role.kubernetes.io
+              operator: "Equal"
+              effect: NoSchedule
+              value: services
+      {{- end }}
+      operators:
+        adminjob:
+          affinity:
+            {{- if .Parameters.deployInControlPlane }}
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  - matchExpressions:
+                      - key: node-role.kubernetes.io/control-plane
+                        operator: Exists
+            {{ end }}
+            {{- if .Parameters.deployInServicePlane }}
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  - matchExpressions:
+                      - key: services.node-role.kubernetes.io
+                        operator: In
+                        values:
+                          - services
+            {{ end }}
+        object-store:
+          affinity:
+            {{- if .Parameters.deployInControlPlane }}
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  - matchExpressions:
+                      - key: node-role.kubernetes.io/control-plane
+                        operator: Exists
+            {{ end }}
+            {{- if .Parameters.deployInServicePlane }}
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  - matchExpressions:
+                      - key: services.node-role.kubernetes.io
+                        operator: In
+                        values:
+                          - services
+            {{ end }}
+        webhook:
+          affinity:
+            {{- if .Parameters.deployInControlPlane }}
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  - matchExpressions:
+                      - key: node-role.kubernetes.io/control-plane
+                        operator: Exists
+            {{ end }}
+            {{- if .Parameters.deployInServicePlane }}
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  - matchExpressions:
+                      - key: services.node-role.kubernetes.io
+                        operator: In
+                        values:
+                          - services
+            {{ end }}
+roles:
+  - aistorOperator
+      

@@ -34,6 +34,12 @@ schema:
         properties:
           public: { type: string, required: true }
       networkPolicies: { type: boolean, required: true }
+      issuerCaSecret:
+        required: true
+        properties:
+          name: { type: string, required: true }
+          key: { type: string }
+
 modules:
 
   - name: noname
@@ -63,8 +69,8 @@ modules:
         scopes: [ "openid", "offline", "profile", "groups", "email"]
         ca:
           secret:
-            name: certs-bundle
-            key: ca.crt
+            name: {{ .Context.issuerCaSecret.name }}
+            key: {{ .Context.issuerCaSecret.key }}
 
   - name: client
     source:

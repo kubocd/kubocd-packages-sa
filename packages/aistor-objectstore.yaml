@@ -1,0 +1,127 @@
+
+apiVersion: v1alpha1
+name: aistor-objectstore
+tag: 1.0.9-p01
+protected: false
+schema:
+  parameters:
+    properties:
+      baseName: { type: string, required: true }
+      rootUser: { type: string, required: true }
+      rootPassword: { type: string, required: true }
+      logLevel: { type: string, default: "INFO" }
+      deployInControlPlane: { type: boolean, default: false }
+      deployInServicePlane: { type: boolean, default: false }
+      storageSize: { type: string, default: "20Gi" }
+      oidc:
+        properties:
+          enabled: { type: boolean, default: false }
+          secret: { type: string }
+          hashedSecret: { type: string }
+          displayName: { type: string }
+
+  context:
+    properties:
+      certificateIssuer:
+        required: true
+        properties:
+          public: { type: string, required: true }
+      storageClass:
+        required: true
+        properties:
+          data: { type: string, required: true }
+      ingress:
+        required: true
+        properties:
+          domain: { type: string, required: true }
+      oidc:
+        properties:
+          issuerURL: { type: string, required: true }
+      issuerCaSecret:
+        required: true
+        properties:
+          name: { type: string, required: true }
+          type: { type: string }
+
+templateHeader: |
+  {{ $baseName := .Parameters.baseName | default .Release.metadata.name }}
+
+dependencies:
+  - aistorOperator
+
+modules:
+  - name: helper
+    source:
+      local:
+        path: ../charts/aistor-objectstore-helper/0.1.0
+    values: |
+      baseName: "{{ $baseName }}"
+      clusterIssuer: "{{ .Context.certificateIssuer.public }}"
+      ingress:
+        domain: "{{ .Context.ingress.domain }}"
+      oidcClient:
+        enabled: {{ .Parameters.oidc.enabled }}
+        hashedSecret: "{{ .Parameters.oidc.hashedSecret }}"
+        displayName: "{{ .Parameters.oidc.displayName }}"
+
+  - name: noname
+    dependsOn:
+      - helper
+    source:
+      helmRepository:
+        url:  https://helm.min.io/
+        chart: aistor-objectstore
+        version: 1.0.9
+    values: |
+      secrets:
+        name: "{{ $baseName }}-env-configuration"
+        accessKey: {{ .Parameters.rootUser }}
+        secretKey: {{ .Parameters.rootPassword }}
+
+      objectStore:
+        name: "{{ $baseName }}"
+        configuration:
+          name: "{{ $baseName }}-env-configuration"
+        pools:
+          - name: pool-0
+            servers: 1
+            volumesPerServer: 4
+            # The capacity per volume requested per MinIO Pod.
+            size: "{{ .Parameters.storageSize }}"
+            storageClassName: "{{ .Context.storageClass.data }}"
+        services:
+          console:
+            name:  "{{ $baseName }}-console"
+            serviceType: ClusterIP
+          minio:
+            name:  "{{ $baseName }}"
+            serviceType: ClusterIP
+        certificates:
+          server:
+            - name:  "{{ $baseName }}-tls"
+              type: kubernetes.io/tls
+          disableAutoCert: true
+          trustedCAs:
+            - name: "{{ .Context.issuerCaSecret.name }}"
+              type: "{{ .Context.issuerCaSecret.type }}"
+        env:
+          {{ if .Parameters.oidc.enabled }}
+          - name: MINIO_IDENTITY_OPENID_CONFIG_URL_KUBAUTH
+            value: "https://kubauth.{{ .Context.ingress.domain }}/.well-known/openid-configuration"
+          - name: MINIO_IDENTITY_OPENID_CLIENT_ID_KUBAUTH
+            value: "{{ $baseName }}"
+          - name: MINIO_IDENTITY_OPENID_CLIENT_SECRET_KUBAUTH
+            value: "{{ .Parameters.oidc.secret }}"
+          - name: MINIO_IDENTITY_OPENID_CLAIM_NAME_KUBAUTH
+            value: "aistor_policies"
+          - name: MINIO_IDENTITY_OPENID_DISPLAY_NAME_KUBAUTH
+            value: "KUBAUTH"
+          - name: MINIO_IDENTITY_OPENID_CLAIM_USERINFO_KUBAUTH
+            value: "off"
+          - name: MINIO_IDENTITY_OPENID_REDIRECT_URI_KUBAUTH
+            value: "https://{{ $baseName }}-console.{{ .Context.ingress.domain }}/oauth_callback"
+          - name: MINIO_IDENTITY_OPENID_SCOPES_KUBAUTH
+            value: "openid,groups,profile,email"
+          {{ end }}
+          - name: MINIO_LOG_LEVEL
+            value: "{{ .Parameters.logLevel }}"

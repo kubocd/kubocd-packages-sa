@@ -1,0 +1,19 @@
+
+
+# This chart is intended to be used aside aistor-objectstore deployment, to provide missing pieces (certificates, ingresses, ....)
+# Usually, baseName is provided by an helper function, defaulting to release name.
+# But, in this case, baseName is shared with the main aistor-objectstore deployment, so it can't default to the helm release name
+# It will be up to the embedding kubocd package to default this values to the kubocd release name.
+
+baseName: # tbd
+
+clusterIssuer: # tbd
+
+ingress:
+  domain: # tbd
+
+oidcClient:
+  enabled: # TBD
+  hashedSecret: # TBD
+  displayName: # Set to appears in the oidc application list
+

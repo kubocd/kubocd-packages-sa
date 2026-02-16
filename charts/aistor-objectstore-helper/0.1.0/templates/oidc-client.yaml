@@ -1,0 +1,41 @@
+
+{{ if .Values.oidcClient.enabled }}
+---
+apiVersion: kubauth.kubotal.io/v1alpha1
+kind: OidcClient
+metadata:
+  name: {{ .Values.baseName }}
+  namespace: kubauth-oidc
+spec:
+  accessTokenLifespan: 1h0m0s
+  description: AiStor S3 Server
+  displayName: {{ .Values.oidcClient.displayName }}
+  entryURL: https://{{ .Values.baseName }}-console.{{ .Values.ingress.domain }}
+  grantTypes:
+    - refresh_token
+    - authorization_code
+  hashedSecret: "{{ .Values.oidcClient.hashedSecret }}"
+  idTokenLifespan: 1h0m0s
+  public: false
+  redirectURIs:
+    - https://{{ .Values.baseName }}-console.{{ .Values.ingress.domain }}/oauth_callback
+    - http://127.0.0.1:9921/callback  # For 'kc token client'
+  refreshTokenLifespan: 1h0m0s
+  responseTypes:
+    - id_token
+    - code
+    - token
+    - id_token token
+    - code id_token
+    - code token
+    - code id_token token
+  scopes:
+    - openid
+    - offline
+    - profile
+    - groups
+    - email
+    - offline_access
+    - address
+    - phone
+{{ end }}
