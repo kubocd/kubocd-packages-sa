@@ -33,7 +33,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: {{ .Values.baseName }}
-  namespace: aistor
+  namespace:  {{ .Release.Namespace }}
   annotations:
     # From https://docs.min.io/enterprise/aistor-object-store/installation/kubernetes/load-balancing/
     #nginx.ingress.kubernetes.io/proxy-body-size: 130m

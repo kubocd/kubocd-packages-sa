@@ -19,4 +19,4 @@ modules:
         {{ $redirection := imageRedirect "ghcr.io/cloudnative-pg/cloudnative-pg" . }}
         repository: {{ $redirection.repository }}
 roles:
-  - pgOperator
+  - cnpg

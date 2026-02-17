@@ -46,8 +46,13 @@ schema:
 templateHeader: |
   {{ $baseName := .Parameters.baseName | default .Release.metadata.name }}
 
-dependencies:
+dependencies: |
   - aistorOperator
+  - ingress
+  - cert-manager
+  {{ if .Parameters.oidc.enabled }}
+  - kubauth
+  {{ end }}
 
 modules:
   - name: helper
@@ -89,6 +94,23 @@ modules:
             # The capacity per volume requested per MinIO Pod.
             size: "{{ .Parameters.storageSize }}"
             storageClassName: "{{ .Context.storageClass.data }}"
+            {{ if .Parameters.deployInControlPlane }}
+            tolerations:
+              - key: "node-role.kubernetes.io/control-plane"
+                operator: "Exists"
+                effect: "NoSchedule"
+            nodeSelector:
+              node-role.kubernetes.io/control-plane: ""
+            {{ end }}
+            {{- if .Parameters.deployInServicePlane }}
+            tolerations:
+              - key: services.node-role.kubernetes.io
+                operator: "Equal"
+                effect: NoSchedule
+                value: services
+            nodeSelector:
+              services.node-role.kubernetes.io: "services"
+            {{- end }}
         services:
           console:
             name:  "{{ $baseName }}-console"

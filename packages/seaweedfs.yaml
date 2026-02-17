@@ -38,6 +38,9 @@ schema:
 templateHeader: |
   {{ $baseName := .Parameters.baseName | default .Release.metadata.name }}
 
+dependencies:
+  - cnpg
+
 modules:
 
   - name: pg
@@ -51,11 +54,12 @@ modules:
       storageSize: "{{ .Parameters.db.storageSize }}"
       {{ if .Parameters.deployInServicePlane }}
       tolerations:
-        - key: "node-role.kubernetes.io/control-plane"
-          operator: "Exists"
-          effect: "NoSchedule"
+        - key: services.node-role.kubernetes.io
+          operator: "Equal"
+          effect: NoSchedule
+          value: services
       nodeSelector:
-        node-role.kubernetes.io/control-plane: ""
+        services.node-role.kubernetes.io: "services"
       {{ end }}
 
   - name: noname
@@ -91,14 +95,15 @@ modules:
             - hosts:
                 - "master.{{ $baseName }}.{{ .Context.ingress.domain }}"
               secretName: "master-{{ $baseName }}-tls"
-          {{ if .Parameters.deployInServicePlane }}
-          tolerations: |
-            - key: "node-role.kubernetes.io/control-plane"
-              operator: "Exists"
-              effect: "NoSchedule"
-          nodeSelector: |
-            node-role.kubernetes.io/control-plane: ""
-          {{ end }}
+        {{ if .Parameters.deployInServicePlane }}
+        tolerations: |
+          - key: services.node-role.kubernetes.io
+            operator: "Equal"
+            effect: NoSchedule
+            value: services
+        nodeSelector: |  
+          services.node-role.kubernetes.io: "services"
+        {{ end }}
 
       volume:
         replicas: 1
@@ -111,11 +116,12 @@ modules:
             maxVolumes: 0
         {{ if .Parameters.deployInServicePlane }}
         tolerations: |
-          - key: "node-role.kubernetes.io/control-plane"
-            operator: "Exists"
-            effect: "NoSchedule"
+          - key: services.node-role.kubernetes.io
+            operator: "Equal"
+            effect: NoSchedule
+            value: services
         nodeSelector: |
-          node-role.kubernetes.io/control-plane: ""
+          services.node-role.kubernetes.io: "services"
         {{ end }}
 
       filer:
@@ -168,12 +174,13 @@ modules:
               secretName: "filer-{{ $baseName }}-tls"
         {{ if .Parameters.deployInServicePlane }}
         tolerations: |
-          - key: "node-role.kubernetes.io/control-plane"
-            operator: "Exists"
-            effect: "NoSchedule"
+          - key: services.node-role.kubernetes.io
+            operator: "Equal"
+            effect: NoSchedule
+            value: services
         nodeSelector: |
-          node-role.kubernetes.io/control-plane: ""
-        {{ end }}
+          services.node-role.kubernetes.io: "services"
+      {{ end }}
 
       s3:
         enabled: true
@@ -189,12 +196,13 @@ modules:
               secretName: "s3-{{ $baseName }}-tls"
         {{ if .Parameters.deployInServicePlane }}
         tolerations: |
-          - key: "node-role.kubernetes.io/control-plane"
-            operator: "Exists"
-            effect: "NoSchedule"
+          - key: services.node-role.kubernetes.io
+            operator: "Equal"
+            effect: NoSchedule
+            value: services
         nodeSelector: |
-          node-role.kubernetes.io/control-plane: ""
-        {{ end }}
+          services.node-role.kubernetes.io: "services"
+      {{ end }}
 
 
       admin:
@@ -221,12 +229,13 @@ modules:
               secretName: "admin-{{ $baseName }}-tls"
         {{ if .Parameters.deployInServicePlane }}
         tolerations: |
-          - key: "node-role.kubernetes.io/control-plane"
-            operator: "Exists"
-            effect: "NoSchedule"
+          - key: services.node-role.kubernetes.io
+            operator: "Equal"
+            effect: NoSchedule
+            value: services
         nodeSelector: |
-          node-role.kubernetes.io/control-plane: ""
-        {{ end }}
+          services.node-role.kubernetes.io: "services"
+      {{ end }}
 
 
 

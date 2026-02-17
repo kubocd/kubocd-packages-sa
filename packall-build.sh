@@ -6,9 +6,15 @@ export OCI_REPO_PREFIX=quay.io/kubosa/packages
 
 export MYDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
+export KUBOCD=$( cd "$MYDIR/../kubocd/" && pwd)
+
+cd "${KUBOCD}" &&  if ! make build-kubocd; then exit $?; fi >/dev/stderr
+
+cd "${MYDIR}" || exit
+
 for pck in packages/*.yaml
 do
   echo
-  kubocd pack $pck
+  "${KUBOCD}/bin/kubocd" pack $pck
 done
 

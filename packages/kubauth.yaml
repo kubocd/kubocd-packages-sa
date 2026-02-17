@@ -223,6 +223,7 @@ modules:
 
 roles:
   - oidc-server
+  - kubauth
 dependencies:
   - ingress
   - certManager

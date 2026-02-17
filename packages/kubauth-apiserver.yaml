@@ -57,4 +57,4 @@ modules:
           usernamePrefix: "{{ .Parameters.oidc.usernamePrefix }}"
           groupsPrefix: "{{ .Parameters.oidc.groupsPrefix }}"
 dependencies:
-  - oidc-server
+  - kubauth

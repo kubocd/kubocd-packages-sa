@@ -100,7 +100,7 @@ modules:
 
 dependencies: |
   - ingress
-  - oidc-server
+  - kubauth
   {{ if .Parameters.tls }}
   - certManager
   {{ end }}

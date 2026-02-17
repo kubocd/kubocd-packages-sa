@@ -110,4 +110,4 @@ modules:
         {{- toYaml . | nindent 6 }}
       {{- end }}
 dependencies:
-  - oidc-server
+  - kubauth
