@@ -102,7 +102,7 @@ modules:
     source:
       oci:
         repository: quay.io/kubauth/charts/kubauth
-        tag: 0.1.2-snapshot
+        tag: 0.1.2
     values: |
       deployInControlPlane: {{ .Parameters.deployInControlPlane }}
       {{- if .Parameters.deployInServicePlane }}

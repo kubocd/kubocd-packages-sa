@@ -7,6 +7,8 @@ description: "A set of tools: Reloader, replicator and secret-generator"
 schema:
   parameters:
     properties:
+      deployInControlPlane: { type: boolean, default: false }
+      deployInServicePlane: { type: boolean, default: false }
       reloader:
         properties:
           enabled: { type: boolean, default: false}
@@ -24,10 +26,27 @@ modules:
       helmRepository:
         url: https://stakater.github.io/stakater-charts
         chart: reloader
-        version: 1.0.72
-    values:
+        version: 2.2.8
+    values: |
       reloader:
         deployment:
+          {{- if .Parameters.deployInControlPlane }}
+          tolerations:
+            - key: "node-role.kubernetes.io/control-plane"
+              operator: "Exists"
+              effect: "NoSchedule"
+          nodeSelector:
+            node-role.kubernetes.io/control-plane: ""
+          {{- end }}
+          {{- if .Parameters.deployInServicePlane }}
+          tolerations:
+            - key: services.node-role.kubernetes.io
+              operator: "Equal"
+              effect: NoSchedule
+              value: services
+          nodeSelector:
+            services.node-role.kubernetes.io: "services"
+          {{- end }}
           securityContext:
             seccompProfile:
               type: RuntimeDefault
@@ -37,6 +56,7 @@ modules:
                 - ALL
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
+            
 
   - name: replicator
     enabled: "{{ .Parameters.replicator.enabled }}"
@@ -45,7 +65,24 @@ modules:
         url: https://helm.mittwald.de
         chart:  kubernetes-replicator
         version: 2.9.2
-    values:
+    values: |
+      {{- if .Parameters.deployInControlPlane }}
+      tolerations:
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoSchedule"
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: ""
+      {{- end }}
+      {{- if .Parameters.deployInServicePlane }}
+      tolerations:
+        - key: services.node-role.kubernetes.io
+          operator: "Equal"
+          effect: NoSchedule
+          value: services
+      nodeSelector:
+        services.node-role.kubernetes.io: "services"
+      {{- end }}
       podSecurityContext:
         seccompProfile:
           type: RuntimeDefault
@@ -76,10 +113,27 @@ modules:
       helmRepository:
         url: https://helm.mittwald.de
         chart:  kubernetes-secret-generator
-        version: 3.4.0
-    values:
+        version: 3.4.1
+    values: |
       # Otherwise, we got secret-generator-secret-generator
       fullnameOverride: secret-generator
+      {{- if .Parameters.deployInControlPlane }}
+      tolerations:
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoSchedule"
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: ""
+      {{- end }}
+      {{- if .Parameters.deployInServicePlane }}
+      tolerations:
+        - key: services.node-role.kubernetes.io
+          operator: "Equal"
+          effect: NoSchedule
+          value: services
+      nodeSelector:
+        services.node-role.kubernetes.io: "services"
+      {{- end }}
       podSecurityContext:
         fsGroup: 2000
         seccompProfile:
@@ -93,3 +147,18 @@ modules:
         runAsNonRoot: true
         runAsUser: 1000
 
+roles: |
+  {{- if  .Parameters.secretGenerator.enabled }}
+  - secretGenerator
+  {{- end }}
+  {{- if  .Parameters.replicator.enabled }}
+  - replicator
+  {{- end }}
+  {{- if  .Parameters.reloader.enabled }}
+  - reloader
+  {{- end }}
+  
+  
+  
+  
+  

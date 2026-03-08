@@ -1,0 +1,302 @@
+
+
+apiVersion: v1alpha1
+name: kubauth
+tag: 0.2.0-p01
+schema:
+  parameters:
+    properties:
+      logger:
+        properties:
+          mode: { type: string, default: text, enum: [ "text", "json"], description: "Log format. Apply to all module" }
+          level: { type: string, default: info, enum: [ "error", "info", "debug", "trace"], description: "Default log level for all modules" }
+      deployInControlPlane: { type: boolean, default: false }
+      deployInServicePlane: { type: boolean, default: false }
+      kcClients:
+        properties:
+          enabled: { type: boolean, default: false }
+          privateClientSecret: { type: string, default: "changeIt" }
+      oidc:
+        properties:
+          logger:
+            properties:
+              level: { type: string, default: info, enum: [ "error", "info", "debug", "trace"] }
+          ingress:
+            properties:
+              host: { type: string, default: kubauth }
+          sso:
+            properties:
+              sticky: { type: boolean, default: false }
+          allowPasswordGrant: { type: boolean, default: false }
+          enforcePKCE: { type: boolean, default: false }
+          dumpExchanges: { type: integer, default: 0 }
+          jwtAccessToken: { type: boolean, default: false }
+          clientPrivilegedNamespace: { type: string }
+
+      audit:
+        properties:
+          enabled: { type: boolean, default: true}
+          logger:
+            properties:
+              level: { type: string, default: info, enum: [ "error", "info", "debug", "trace"] }
+
+      merger:
+        properties:
+          enabled: { type: boolean, default: false}
+          logger:
+            properties:
+              level: { type: string, default: info, enum: [ "error", "info", "debug", "trace"] }
+
+      ucrd:
+        properties:
+          enabled: { type: boolean, default: true}
+          logger:
+            properties:
+              level: { type: string, default: info, enum: [ "error", "info", "debug", "trace"] }
+          credentialAuthority: { type: boolean, default: true }
+          groupAuthority: { type: boolean, default: true }
+          groupPattern: { type: string, default: "%s" }
+          claimAuthority: { type: boolean, default: true }
+          claimPattern: { type: string, default: "%s" }
+          nameAuthority: { type: boolean, default: true }
+          emailAuthority: { type: boolean, default: true }
+          critical: { type: boolean, default: true }
+          uidOffset: { type: integer, default: 0 }
+
+      ldap:
+        properties:
+          enabled: { type: boolean, default: false}
+          logger:
+            properties:
+              level: { type: string, default: info, enum: [ "error", "info", "debug", "trace"] }
+          credentialAuthority: { type: boolean, default: true }
+          groupAuthority: { type: boolean, default: true }
+          groupPattern: { type: string, default: "%s" }
+          claimAuthority: { type: boolean, default: true }
+          claimPattern: { type: string, default: "%s" }
+          nameAuthority: { type: boolean, default: true }
+          emailAuthority: { type: boolean, default: true }
+          critical: { type: boolean, default: true }
+          uidOffset: { type: integer, default: 0 }
+
+  context:
+    properties:
+      cluster:
+        required: false
+        properties:
+          hostNetworkCidr: { type: string, required: false, description: "Required for multi-nodes kind cluster" }
+      certificateIssuer:
+        required: true
+        properties:
+          public: { type: string, required: true }
+      networkPolicies: { type: boolean, required: true }
+      ingress:
+        required: false
+        properties:
+          className: { type: string, default: "nginx"}
+          domain: { type: string, required: true }
+      ldap:
+        required: false
+        additionalProperties: true
+        properties:
+          host: { type: string, required: true }
+          # TODO: Explicit properties for better check
+
+
+modules:
+  - name: noname
+    source:
+      oci:
+        repository: quay.io/kubauth/charts/kubauth
+        tag: 0.2.0-snapshot
+    values: |
+      deployInControlPlane: {{ .Parameters.deployInControlPlane }}
+      {{- if .Parameters.deployInServicePlane }}
+      tolerations:
+        - key: services.node-role.kubernetes.io
+          operator: "Equal"
+          effect: NoSchedule
+          value: services
+      nodeSelector:
+        services.node-role.kubernetes.io: "services"
+      {{- end }}
+      networkPolicies:
+        forWebhooks: true
+        {{- with .Context.cluster.hostNetworkCidr }}
+        ipBlock: {{ . }}
+        {{- end }}
+      oidc:
+        enabled: true
+        logger:
+          mode: {{ .Parameters.logger.mode }}
+          level: {{ .Parameters.oidc.logger.level | default .Parameters.logger.level }}
+        dumpExchanges: {{ .Parameters.oidc.dumpExchanges }}
+        server:
+          certificateIssuer: {{ .Context.certificateIssuer.public }}
+          tls: true
+        ingress:
+          host: {{ .Parameters.oidc.ingress.host}}.{{.Context.ingress.domain}}
+          class: {{ .Context.ingress.className }}
+        postLogoutURL: https://{{ .Parameters.oidc.ingress.host}}.{{.Context.ingress.domain}}/index
+        issuer: https://{{ .Parameters.oidc.ingress.host}}.{{.Context.ingress.domain}}
+        networkPolicies:
+          enabled: {{ .Context.networkPolicies}}
+        sso:
+          cleanupPeriod: 5m
+          sticky: {{ .Parameters.oidc.sso.sticky }}
+        allowPasswordGrant: {{ .Parameters.oidc.allowPasswordGrant }}
+        enforcePKCE: {{ .Parameters.oidc.enforcePKCE }}
+        jwtAccessToken: {{ .Parameters.oidc.jwtAccessToken }}
+        clientPrivilegedNamespace: {{ .Parameters.oidc.clientPrivilegedNamespace }}
+        idProvider:
+          {{- if .Parameters.audit.enabled }}
+          baseURL: http://localhost:6805
+          {{- else if .Parameters.merger.enabled }}
+          baseURL: http://localhost:6804
+          {{- else if .Parameters.ldap.enabled }}
+          baseURL: http://localhost:6803
+          {{- else if .Parameters.ucrd.enabled }}
+          baseURL: http://localhost:6802
+          {{- else }}
+          {{ fail "No identity provider defined above oidc" }}
+          {{- end }}
+      
+      audit:
+        enabled: {{ .Parameters.audit.enabled }}
+        logger:
+          mode: {{ .Parameters.logger.mode }}
+          level: {{ .Parameters.audit.logger.level | default .Parameters.logger.level }}
+        idProvider:
+          {{- if .Parameters.merger.enabled }}
+          baseURL: http://localhost:6804
+          {{- else if .Parameters.ldap.enabled }}
+          baseURL: http://localhost:6803
+          {{- else if .Parameters.ucrd.enabled }}
+          baseURL: http://localhost:6802
+          {{- else }}
+          {{ fail "No identity provider defined above oidc" }}
+          {{- end }}
+
+      merger:
+        enabled: {{ .Parameters.merger.enabled }}
+        logger:
+          mode: {{ .Parameters.logger.mode }}
+          level: {{ .Parameters.merger.logger.level | default .Parameters.logger.level }}
+        idProviders:
+          {{- if .Parameters.ldap.enabled }}
+          - name: ldap
+            httpConfig:
+              baseURL: http://localhost:6803
+            credentialAuthority: {{ .Parameters.ldap.credentialAuthority }}
+            groupAuthority: {{ .Parameters.ldap.groupAuthority }}
+            groupPattern: "{{ .Parameters.ldap.groupPattern }}"
+            claimAuthority: {{ .Parameters.ldap.claimAuthority }}
+            claimPattern: "{{ .Parameters.ldap.claimPattern }}"
+            nameAuthority: {{ .Parameters.ldap.nameAuthority }}
+            emailAuthority: {{ .Parameters.ldap.emailAuthority }}
+            critical: {{ .Parameters.ldap.critical }}
+            uidOffset: {{ .Parameters.ldap.uidOffset }}
+          {{- end }}
+          {{- if .Parameters.ucrd.enabled }}
+          - name: ucrd
+            httpConfig:
+              baseURL: http://localhost:6802
+            credentialAuthority: {{ .Parameters.ucrd.credentialAuthority }}
+            groupAuthority: {{ .Parameters.ucrd.groupAuthority }}
+            groupPattern: "{{ .Parameters.ucrd.groupPattern }}"
+            claimAuthority: {{ .Parameters.ucrd.claimAuthority }}
+            claimPattern: "{{ .Parameters.ucrd.claimPattern }}"
+            nameAuthority: {{ .Parameters.ucrd.nameAuthority }}
+            emailAuthority: {{ .Parameters.ucrd.emailAuthority }}
+            critical: {{ .Parameters.ucrd.critical }}
+            uidOffset: {{ .Parameters.ucrd.uidOffset }}
+          {{- end }}
+  
+    
+      ucrd:
+        enabled: {{ .Parameters.ucrd.enabled }}
+        logger:
+          mode: {{ .Parameters.logger.mode }}
+          level: {{ .Parameters.ucrd.logger.level | default .Parameters.logger.level }}
+      
+      ldap:
+        enabled: {{ .Parameters.ldap.enabled }}
+        logger:
+          mode: {{ .Parameters.logger.mode }}
+          level: {{ .Parameters.ldap.logger.level | default .Parameters.logger.level }}
+        ldap:
+          {{- toYaml .Context.ldap | nindent 4 }}
+
+  - name: kc-clients
+    source:
+      local:
+        path: ../charts/wrapper/1.0.0
+    enabled: "{{ .Parameters.kcClients.enabled }}"
+    values:
+      body: |
+        ---
+        apiVersion: kubauth.kubotal.io/v1alpha1
+        kind: OidcClient
+        metadata:
+          name: kc-public
+        spec:
+          redirectURIs:
+            - "http://127.0.0.1:9921/callback"
+            - "http://127.0.0.1:9922/callback"
+          {{- if .Parameters.oidc.allowPasswordGrant }}
+          grantTypes: [ "implicit", "refresh_token", "authorization_code", "password" ]
+          {{- else }}
+          grantTypes: [ "implicit", "refresh_token", "authorization_code" ]
+          {{- end }}
+          responseTypes: [ "id_token", "code", "token", "id_token token", "code id_token", "code token", "code id_token token" ]
+          scopes: [ "openid", "offline", "profile", "groups", "email", "offline_access", "xxx" ]
+          description: A test OIDC public client
+          forceOpenIdScope: false
+          accessTokenLifespan: 5m
+          refreshTokenLifespan: 30m
+          idTokenLifespan: 5m
+          public: true
+        
+        ---
+        apiVersion: kubauth.kubotal.io/v1alpha1
+        kind: OidcClient
+        metadata:
+          name: kc-private
+        spec:
+          redirectURIs:
+            - "http://127.0.0.1:9921/callback"
+            - "http://127.0.0.1:9922/callback"
+          {{- if .Parameters.oidc.allowPasswordGrant }}
+          grantTypes: [ "implicit", "refresh_token", "authorization_code", "client_credentials", "password" ]
+          {{- else }}
+          grantTypes: [ "implicit", "refresh_token", "authorization_code", "client_credentials" ]
+          {{- end }}
+          responseTypes: [ "id_token", "code", "token", "id_token token", "code id_token", "code token", "code id_token token" ]
+          scopes: [ "openid", "offline", "profile", "groups", "email", "offline_access", "xxx" ]
+          description: A test OIDC private client
+          forceOpenIdScope: false
+          accessTokenLifespan: 5m
+          refreshTokenLifespan: 30m
+          idTokenLifespan: 5m
+          public: false
+          secrets:
+            - name: kc-private
+              key: clientSecret
+
+        ---
+        apiVersion: v1
+        kind: Secret
+        metadata:
+          name: kc-private
+        type: Opaque
+        stringData:
+          clientSecret: {{ .Parameters.kcClients.privateClientSecret }}
+
+        
+
+roles:
+  - oidcServer
+  - kubauth
+dependencies:
+  - ingress
+  - certManager

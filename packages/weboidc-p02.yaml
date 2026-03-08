@@ -1,8 +1,8 @@
 
 
 apiVersion: v1alpha1
-name: weboidc-kubauth
-tag: 0.1.0-p01
+name: weboidc
+tag: 0.1.0-p02
 schema:
   parameters:
     properties:
@@ -12,12 +12,8 @@ schema:
           mode: { type: string, default: dev, enum: [ "dev", "json"] }
           level: { type: string, default: info, enum: [ "error", "info", "debug", "trace"] }
       host: { type: string, required: true }
-      tls: { type: boolean, default: false }
-      oidc:
-        required: true
-        properties:
-          clientSecret: { type: string, required: true }
-          clientSecretHash: { type: string, required: true }
+      tls: { type: boolean, default: true }   # Must be always set, as currently, kubauth does not allow http:// on redirect URL (except for localhost)
+      withKubauthClient: { type: boolean, default: true }
   context:
     properties:
       ingress:
@@ -26,19 +22,24 @@ schema:
           className: { type: string, default: "nginx"}
           domain: { type: string, required: true }
       oidc:
-        required: true
+        required: false
         properties:
           issuerURL: { type: string, required: true }
       certificateIssuer:
-        required: true
+        required: false
         properties:
           public: { type: string, required: true }
       networkPolicies: { type: boolean, required: true }
       issuerCaSecret:
-        required: true
+        required: false   # True if oidc
         properties:
           name: { type: string, required: true }
           key: { type: string }
+
+# Create a unique instance ID
+templateHeader: |
+  {{ $instanceId := printf "%s-%s" .Release.metadata.namespace .Release.metadata.name }}
+  {{ $secretName := printf "weboidc-%s" $instanceId }}
 
 modules:
 
@@ -47,6 +48,7 @@ modules:
       oci:
         repository: quay.io/kuboauth/charts/weboidc
         tag: 0.1.0-snapshot
+    timeout: 1m
     values: |
       name: {{ .Parameters.name }}
       log:
@@ -55,52 +57,73 @@ modules:
       ingress:
         enabled: true
         class: {{ .Context.ingress.className }}
-        host: {{ .Parameters.host}}.{{.Context.ingress.domain}}
+        host: {{ .Parameters.host }}.{{.Context.ingress.domain}}
         networkPolicy:
-          enabled: {{ .Context.networkPolicies}}
+          enabled: {{ .Context.networkPolicies }}
       server:
-        certificateIssuer: {{ .Context.certificateIssuer.public }}
+        tls: {{ .Parameters.tls }}
+        certificateIssuer: {{ dig "certificateIssuer" "public" "" .Context }}
+      {{- if .Parameters.withKubauthClient }}
       oidc:
         clientId:
-          value: {{ .Release.metadata.namespace}}-{{.Release.metadata.name }}
+          value: {{ printf "%s-%s" .Release.spec.targetNamespace $instanceId }}
         clientSecret:
-          value: {{ .Parameters.oidc.clientSecret }}
-        issuerUrl: {{ .Context.oidc.issuerURL}}
+          secret:
+            name: {{ $secretName }}
+            key: clientSecret
+        issuerUrl: {{ .Context.oidc.issuerURL }}
         scopes: [ "openid", "offline", "profile", "groups", "email"]
         ca:
           secret:
             name: {{ .Context.issuerCaSecret.name }}
             key: {{ .Context.issuerCaSecret.key }}
+      {{- end }}
 
-  - name: client
+  - name: oidc-client
+    enabled: "{{ .Parameters.withKubauthClient }}"
     source:
       local:
         path: ../charts/wrapper/1.0.0
     values:
       body: |
+        ---
         apiVersion: kubauth.kubotal.io/v1alpha1
         kind: OidcClient
         metadata:
-          name: {{ .Release.metadata.namespace}}-{{.Release.metadata.name}}
-          namespace: kubauth-oidc
+          name: {{ $instanceId }}
         spec:
           accessTokenLifespan: 1h0m0s
           description: A first test OIDC client application
-          displayName: Weboidc (1)
-          entryURL: https://{{ .Parameters.host}}.{{.Context.ingress.domain}}
+          displayName: {{ .Parameters.name }}
+          entryURL: https://{{ .Parameters.host }}.{{.Context.ingress.domain }}
           grantTypes: [ "refresh_token", "authorization_code" ]
-          hashedSecret: {{ .Parameters.oidc.clientSecretHash }}
           idTokenLifespan: 1h0m0s
           public: false
           redirectURIs:
-            - https://{{ .Parameters.host}}.{{.Context.ingress.domain}}/wo_callback
+            - {{ if .Parameters.tls }}https{{ else }}http{{ end}}://{{ .Parameters.host }}.{{.Context.ingress.domain }}/wo_callback
           refreshTokenLifespan: 1h0m0s
           responseTypes: ["id_token", "code", "token", "id_token token", "code id_token", "code token", "code id_token token"]
           scopes: [ "openid", "offline", "profile", "groups", "email"]
+          secrets:
+            - name:  {{ $secretName }}
+              key: clientSecret
+
+        ---
+        apiVersion: v1
+        kind: Secret
+        metadata:
+          name: {{ $secretName }}
+          annotations:
+            secret-generator.v1.mittwald.de/autogenerate: clientSecret        
+        type: Opaque
+
 
 dependencies: |
   - ingress
+  {{- if .Parameters.kubauth }}
   - kubauth
-  {{ if .Parameters.tls }}
+  - secretGenerator
+  {{- end }}
+  {{- if .Parameters.tls }}
   - certManager
-  {{ end }}
+  {{- end }}

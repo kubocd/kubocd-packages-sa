@@ -6,7 +6,7 @@ tag: 6.7.1-p01
 schema:
   parameters:
     properties:
-      host: { type: string, required: false }
+      host: { type: string, required: true }
       tls: { type: boolean, default: false }
   context:
     properties:
@@ -15,15 +15,6 @@ schema:
         properties:
           className: { type: string, default: "nginx"}
           domain: { type: string, required: true }
-templateHeader: |
-  {{- $uiHost := .Parameters.host | default (printf "%s-%s" .Release.metadata.name .Release.metadata.namespace) -}}
-description: |
-  A sample application on {{ $uiHost }}
-usage:
-  text: |
-    Podinfo can be accessed using {{if .Parameters.tls}}https{{else}}http{{end}}://{{ $uiHost }}.{{ .Context.ingress.domain }}
-  html: |
-    Podinfo can be accessed using <a href="{{if .Parameters.tls}}https{{else}}http{{end}}://{{ $uiHost }}.{{ .Context.ingress.domain }}">this link</a>
 modules:
   - name: noname
     source:
@@ -40,7 +31,7 @@ modules:
           cert-manager.io/cluster-issuer: {{ required ".Context.certificateIssuer.public must be defined if tls: true" .Context.certificateIssuer.public }}
         {{- end }}
         hosts:
-          - host: {{ $uiHost }}.{{ .Context.ingress.domain }}
+          - host: {{ .Parameters.host }}.{{ .Context.ingress.domain }}
             paths:
               - path: /
                 pathType: ImplementationSpecific
@@ -48,13 +39,8 @@ modules:
         tls:
           - secretName: {{ .Release.metadata.name }}-tls
             hosts:
-              - {{ $uiHost }}.{{ .Context.ingress.domain }}
+              - {{ .Parameters.host }}.{{ .Context.ingress.domain }}
         {{- end }}
-      {{- $redirection := imageRedirect "ghcr.io/stefanprodan/podinfo:6.7.1" . }}
-      image: 
-        repository: {{ $redirection.repository }}
-        pullPolicy: {{ $redirection.imagePullPolicy | default "IfNotPresent" }}
-        tag: {{ $redirection.tag }}
 dependencies: |
   - ingress
   {{ if .Parameters.tls }}
