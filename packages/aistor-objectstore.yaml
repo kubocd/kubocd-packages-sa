@@ -6,19 +6,18 @@ protected: false
 schema:
   parameters:
     properties:
-      baseName: { type: string, required: true }
+      baseName: { type: string, required: false }
       rootUser: { type: string, required: true }
       rootPassword: { type: string, required: true }
       logLevel: { type: string, default: "INFO" }
       deployInControlPlane: { type: boolean, default: false }
       deployInServicePlane: { type: boolean, default: false }
       storageSize: { type: string, default: "20Gi" }
-      oidc:
+      kubauth:
         properties:
           enabled: { type: boolean, default: false }
-          secret: { type: string }
-          hashedSecret: { type: string }
-          displayName: { type: string }
+          privateClient: { type: boolean, default: true }
+          displayName: { type: string, default: "Minio" }
 
   context:
     properties:
@@ -45,29 +44,26 @@ schema:
 
 templateHeader: |
   {{ $baseName := .Parameters.baseName | default .Release.metadata.name }}
+  {{ $secretName := printf "aistor-oidc-%s" $baseName }}
+  {{ $clientId := printf "%s-%s" .Release.spec.targetNamespace $baseName }}
 
-dependencies: |
-  - aistorOperator
-  - ingress
-  - cert-manager
-  {{ if .Parameters.oidc.enabled }}
-  - kubauth
-  {{ end }}
 
 modules:
   - name: helper
     source:
       local:
-        path: ../charts/aistor-objectstore-helper/0.1.0
+        path: ../charts/aistor-objectstore-helper/0.2.0
     values: |
       baseName: "{{ $baseName }}"
       clusterIssuer: "{{ .Context.certificateIssuer.public }}"
       ingress:
         domain: "{{ .Context.ingress.domain }}"
       oidcClient:
-        enabled: {{ .Parameters.oidc.enabled }}
-        hashedSecret: "{{ .Parameters.oidc.hashedSecret }}"
-        displayName: "{{ .Parameters.oidc.displayName }}"
+        enabled: {{ .Parameters.kubauth.enabled }}
+        displayName: "{{ .Parameters.kubauth.displayName }}"
+        secretName: {{ $secretName }}
+        privateClient: {{ .Parameters.kubauth.privateClient }}
+        clientId: {{ $clientId }}
 
   - name: noname
     dependsOn:
@@ -127,13 +123,18 @@ modules:
             - name: "{{ .Context.issuerCaSecret.name }}"
               type: "{{ .Context.issuerCaSecret.type }}"
         env:
-          {{ if .Parameters.oidc.enabled }}
+          {{- if .Parameters.kubauth.enabled }}
           - name: MINIO_IDENTITY_OPENID_CONFIG_URL_KUBAUTH
             value: "https://kubauth.{{ .Context.ingress.domain }}/.well-known/openid-configuration"
           - name: MINIO_IDENTITY_OPENID_CLIENT_ID_KUBAUTH
-            value: "{{ $baseName }}"
+            value: "{{ $clientId }}"
+          {{- if .Parameters.kubauth.privateClient }}
           - name: MINIO_IDENTITY_OPENID_CLIENT_SECRET_KUBAUTH
-            value: "{{ .Parameters.oidc.secret }}"
+            valueFrom:
+              secretKeyRef:
+                key: clientSecret
+                name: {{ $secretName }}
+          {{- end }}
           - name: MINIO_IDENTITY_OPENID_CLAIM_NAME_KUBAUTH
             value: "aistor_policies"
           - name: MINIO_IDENTITY_OPENID_DISPLAY_NAME_KUBAUTH
@@ -144,6 +145,17 @@ modules:
             value: "https://{{ $baseName }}-console.{{ .Context.ingress.domain }}/oauth_callback"
           - name: MINIO_IDENTITY_OPENID_SCOPES_KUBAUTH
             value: "openid,groups,profile,email"
-          {{ end }}
+          {{- end }}
           - name: MINIO_LOG_LEVEL
             value: "{{ .Parameters.logLevel }}"
+
+dependencies: |
+  - aistorOperator
+  - ingress
+  - cert-manager
+  {{ if .Parameters.kubauth.enabled }}
+  - kubauth
+  {{- if .Parameters.kubauth.privateClient }}
+  - secretGenerator
+  {{ end }}
+  {{ end }}

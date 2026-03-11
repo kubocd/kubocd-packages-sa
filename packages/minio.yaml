@@ -45,6 +45,7 @@ schema:
         properties:
           enabled: { type: boolean, default: true }
           privateClient: { type: boolean, default: true }
+          displayName: { type: string, default: "Minio" }
   context:
     properties:
       certificateIssuer:
@@ -176,7 +177,7 @@ modules:
           grantTypes: [ "refresh_token", "authorization_code" ]
           responseTypes: ["id_token", "code", "token", "id_token token", "code id_token", "code token", "code id_token token"]
           scopes: [ "openid", "offline", "profile", "groups", "email", "offline_access", "address", "phone"]
-          displayName: Minio
+          displayName: {{ .Parameters.kubauth.displayName }}
           description: S3 Server
           entryURL: "https://{{ $hostConsole }}.{{ .Context.ingress.domain }}"
           {{ if .Parameters.kubauth.privateClient }}
@@ -206,6 +207,9 @@ dependencies: |
   - certManager
   {{- if .Parameters.kubauth.enabled }}
   - kubauth
+  {{- if .Parameters.kubauth.privateClient }}
+  - secretGenerator
+  {{ end }}
   {{ end }}
 
 roles:
