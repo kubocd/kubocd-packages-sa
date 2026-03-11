@@ -11,8 +11,8 @@ minio:
   rootUser: # TBD
   rootPassword: # TBD
 
-  nameOverride: "minio"
-  fullnameOverride: "minio"
+#  nameOverride: "minio"
+#  fullnameOverride: "minio"
 
   additionalAnnotations:
     reloader.stakater.com/auto: "true"

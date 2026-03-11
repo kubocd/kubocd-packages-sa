@@ -1,0 +1,176 @@
+
+
+apiVersion: v1alpha1
+name: kubauth-k8s
+tag: 0.2.0-p01
+
+dependencies:
+  - ingress
+  - kubauth
+  - secretGenerator
+  - certManager
+
+schema:
+  parameters:
+    properties:
+      logger:
+        properties:
+          mode: { type: string, default: json, enum: [ "text", "json"] }
+          level: { type: string, default: info, enum: [ "error", "info", "debug", "trace"] }
+      replicaCount: { type: integer, default: 1 }
+      host: { type: string, default: "kubeconfig" }
+      tls: { type: boolean, default: true }
+      namespace: { type: string, required: false, description: "Will be default namespace for logged users" }
+      deployInControlPlane: { type: boolean, default: false }
+      deployInServicePlane: { type: boolean, default: false }
+      privateClient: { type: boolean, default: true }
+      patcher:
+        properties:
+          logger:
+            properties:
+              mode: { type: string, default: text, enum: [ "text", "json" ], description: "Log format. Apply to all module" }
+              level: { type: string, default: info, enum: [ "error", "info", "debug", "trace" ], description: "Default log level for all modules" }
+          oidc:
+            properties:
+              usernamePrefix: { type: string, default: "-" }
+              groupsPrefix: { type: string, default: "oidc-" }
+          apiserver:
+            properties:
+              timeoutApiServerDown: { type: string, default: "30s" }
+              timeoutApiServerUp: { type: string, default: "4m" }
+              timeoutHelmRelease: { type: string, default: "6m" }
+  context:
+    properties:
+      oidc:
+        required: true
+        properties:
+          issuerURL: { type: string, required: true }
+      issuerCaSecret:
+        required: true
+        properties:
+          name: { type: string, required: true }
+          key: { type: string }
+
+templateHeader: |
+  {{ $secretName := "kubauth-k8s" }}
+  {{ $oidcClientName := "k8s" }}
+  {{ $clientId :=  printf "%s-%s" .Release.spec.targetNamespace $oidcClientName }}
+
+modules:
+
+  - name: noname
+    source:
+      oci:
+        repository: quay.io/kubauth/charts/kubauth-kubeconfig
+        tag: 0.2.0-snapshot
+    dependsOn:
+      - oidc-client
+    values: |
+      replicaCount: {{ .Parameters.replicaCount }}
+      deployInControlPlane: {{ .Parameters.deployInControlPlane }}
+      {{- if .Parameters.deployInServicePlane }}
+      tolerations:
+        - key: services.node-role.kubernetes.io
+          operator: "Equal"
+          effect: NoSchedule
+          value: services
+      nodeSelector:
+        services.node-role.kubernetes.io: "services"
+      {{- end }}
+      logger:
+        mode: {{ .Parameters.logger.mode }}
+        level: {{ .Parameters.logger.level }}
+      ingress:
+        host: {{ .Parameters.host }}.{{ .Context.ingress.domain }}
+      server:
+        tls: {{ .Parameters.tls }}
+        certificateIssuer: {{ .Context.certificateIssuer.public }}
+      networkPolicies:
+        enabled: {{ .Context.networkPolicies }}
+      {{- if .Parameters.privateClient }}
+      extraEnv:
+        - name: "KUBECONFIG_CLIENT_SECRET"
+          valueFrom:
+            secretKeyRef:
+              name: {{ $secretName }}
+              key: clientSecret
+      {{- end }}
+      kubeconfigs:
+        default:
+          description: Default OIDC client configuration
+          cluster:
+            apiServerURL: "{{ .Context.cluster.apiServerURL }}"
+          context:
+            name: oidc-{{ .Context.cluster.name }}
+            namespace: {{ .Parameters.namespace }}
+          oidc:
+            issuerURL: "{{ .Context.oidc.issuerURL }}"
+            issuerCaSecretName: {{ .Context.issuerCaSecret.name }}
+            issuerCaName: {{ .Context.issuerCaSecret.key }}
+            clientId: {{ $clientId }}
+
+
+  - name: oidc-client
+    source:
+      local:
+        path: ../charts/wrapper/1.0.0
+    values:
+      body: |
+        ---
+        apiVersion: kubauth.kubotal.io/v1alpha1
+        kind: OidcClient
+        metadata:
+          name: {{ $oidcClientName }}
+        spec:
+          clientId: {{ $clientId }}   # Otherwise, client_id will be wrong if deployed on 'kubauth' namespace
+          redirectURIs:
+          - "http://127.0.0.1:9921/callback" # For kc client test
+          - "http://localhost:8000"
+          - "http://localhost:18000"
+          grantTypes: [ "refresh_token", "authorization_code", "password" ]
+          responseTypes: [ "id_token", "code", "token", "id_token token", "code id_token", "code token", "code id_token token" ]
+          scopes: [ "openid", "offline", "profile", "groups", "email", "offline_access" ]
+          description: For kubernetes cluster access
+          forceOpenIdScope: true
+          accessTokenLifespan: 1m
+          refreshTokenLifespan: 30m
+          idTokenLifespan: 1m
+          {{- if .Parameters.privateClient }}
+          public: false
+          secrets:
+            - name:  {{ $secretName }}
+              key: clientSecret
+          {{ else }}
+          public: true
+          {{- end }}
+        {{- if .Parameters.privateClient }}
+        ---
+        apiVersion: v1
+        kind: Secret
+        metadata:
+          name: {{ $secretName }}
+          annotations:
+            secret-generator.v1.mittwald.de/autogenerate: clientSecret        
+        type: Opaque
+        {{- end }}
+
+  - name: patcher
+    source:
+      oci:
+        repository: quay.io/kubauth/charts/kubauth-apiserver
+        tag: 0.1.0-snapshot
+    timeout: "{{ .Parameters.patcher.apiserver.timeoutHelmRelease }}"
+    values: |
+      logger:
+        mode: {{ .Parameters.patcher.logger.mode }}
+        level: {{ .Parameters.patcher.logger.level }}
+      config:
+        timeoutApiServerDown: {{ .Parameters.patcher.apiserver.timeoutApiServerDown }}
+        timeoutApiServerUp: {{ .Parameters.patcher.apiserver.timeoutApiServerUp }}
+        oidc:
+          issuerURL: "{{ .Context.oidc.issuerURL }}"
+          issuerCaSecretName: {{ .Context.issuerCaSecret.name }}
+          issuerCaName: {{ .Context.issuerCaSecret.key }}
+          usernamePrefix: "{{ .Parameters.patcher.oidc.usernamePrefix }}"
+          groupsPrefix: "{{ .Parameters.patcher.oidc.groupsPrefix }}"
+          clientId: {{ $clientId }}

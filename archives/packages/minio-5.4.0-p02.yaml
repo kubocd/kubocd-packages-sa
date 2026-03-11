@@ -1,7 +1,7 @@
 
 apiVersion: v1alpha1
 name: minio
-tag: 5.4.0-p03
+tag: 5.4.0-p02
 protected: true
 schema:
   parameters:
@@ -41,10 +41,25 @@ schema:
         properties:
           enabled: { type: boolean, default: false }
           host: { type: string, required: true }
-      kubauth:
+      oidc:
         properties:
-          enabled: { type: boolean, default: true }
-          privateClient: { type: boolean, default: true }
+          enabled: { type: boolean }
+          clientId: { type: string, required: true }
+          clientSecret: { type: string }
+  #      environment:
+  #        properties:
+  #          MINIO_IDENTITY_LDAP_SERVER_ADDR: { type: string }
+  #          MINIO_IDENTITY_LDAP_LOOKUP_BIND_DN: { type: string }
+  #          MINIO_IDENTITY_LDAP_LOOKUP_BIND_PASSWORD: { type: string }
+  #          MINIO_IDENTITY_LDAP_USER_DN_SEARCH_BASE_DN: { type: string }
+  #          MINIO_IDENTITY_LDAP_USER_DN_SEARCH_FILTER: { type: string }
+  #          MINIO_IDENTITY_LDAP_GROUP_SEARCH_BASE_DN: { type: string }
+  #          MINIO_IDENTITY_LDAP_GROUP_SEARCH_FILTER: { type: string }
+  #          MINIO_IDENTITY_LDAP_TLS_SKIP_VERIFY: { type: string }
+  #          MINIO_IDENTITY_LDAP_SERVER_INSECURE: { type: string }
+  #          MINIO_IDENTITY_LDAP_SERVER_STARTTLS: { type: string }
+  #          MINIO_IDENTITY_LDAP_SRV_RECORD_NAME: { type: string }
+  #          MINIO_IDENTITY_LDAP_COMMENT: { type: string }
   context:
     properties:
       certificateIssuer:
@@ -62,25 +77,11 @@ schema:
       oidc:
         properties:
           issuerURL: { type: string, required: true }
-
-
-templateHeader: |
-  {{ $instanceId := printf "%s-%s" .Release.metadata.namespace .Release.metadata.name }}
-  {{ $oidcClientName := $instanceId }}
-  {{ $clientId := printf "%s-%s" .Release.spec.targetNamespace $oidcClientName }}
-  {{ $secretName := printf "minio-%s" $instanceId }}
-  {{ $hostConsole := .Parameters.ingresses.console.host | default (printf "%s-console" .Release.metadata.name) }}
-
-
 modules:
   - name: noname
     source:
       local:
         path: ../charts/minio/5.4.0
-    dependsOn: |
-      {{- if .Parameters.kubauth.enabled }}
-      - oidc-client
-      {{ end }}
     values: |
       minio:
         rootUser: {{ .Parameters.rootUser }} 
@@ -116,11 +117,12 @@ modules:
         ingress:
           enabled: {{ .Parameters.ingresses.passThrough.enabled }}
           hosts:
-            - {{ .Parameters.ingresses.passThrough.host | default (printf "%s" .Release.metadata.name) }}.{{ .Context.ingress.domain }}
+            - {{ .Parameters.ingresses.passThrough.host | default (printf "minio-%s" .Release.spec.targetNamespace) }}.{{ .Context.ingress.domain }}
         consoleIngress:
           enabled: {{ .Parameters.ingresses.console.enabled }}
           annotations:
             cert-manager.io/cluster-issuer: {{ .Context.certificateIssuer.public }}
+          {{- $hostConsole := .Parameters.ingresses.console.host | default (printf "minio-console-%s" .Release.spec.targetNamespace) }}
           hosts:
             - {{ $hostConsole }}.{{ .Context.ingress.domain }}
           tls:
@@ -130,81 +132,32 @@ modules:
         secondaryIngress:
           enabled: {{ .Parameters.ingresses.public.enabled }}
           clusterIssuer: {{ .Context.certificateIssuer.public }}
-          host: {{ .Parameters.ingresses.public.host | default (printf "%s-public" .Release.metadata.name) }}.{{ .Context.ingress.domain }}
+          host: {{ .Parameters.ingresses.public.host | default (printf "minio-public-%s" .Release.spec.targetNamespace) }}.{{ .Context.ingress.domain }}
         clearTextIngress:
           enabled: {{ .Parameters.ingresses.clearText.enabled }}
-          host: {{ .Parameters.ingresses.clearText.host | default (printf "%s-clear-text" .Release.metadata.name) }}.{{ .Context.ingress.domain }}
+          host: {{ .Parameters.ingresses.clearText.host | default (printf "minio-clear-text-%s" .Release.spec.targetNamespace) }}.{{ .Context.ingress.domain }}
         {{- if .Parameters.vip.enabled }}
         vip:
           enabled: true
           host: {{ .Parameters.vip.host }}
           ip: {{ resolveDNS .Parameters.vip.host }}
         {{- end }}
+        {{- if .Parameters.oidc.enabled }}
+        environment:
+          MINIO_IDENTITY_OPENID_CONFIG_URL: {{ .Context.oidc.issuerURL }}/.well-known/openid-configuration
+          MINIO_IDENTITY_OPENID_CLIENT_ID: {{ .Parameters.oidc.clientId }}
+          MINIO_IDENTITY_OPENID_CLIENT_SECRET: {{ .Parameters.oidc.clientSecret }}
+          MINIO_IDENTITY_OPENID_CLAIM_NAME: "policy"
+          MINIO_IDENTITY_OPENID_DISPLAY_NAME: "KUBAUTH"
+          MINIO_IDENTITY_OPENID_CLAIM_USERINFO: "on"
+          MINIO_IDENTITY_OPENID_REDIRECT_URI: https://{{ $hostConsole }}.{{ .Context.ingress.domain }}/oauth_callback
+        {{- end }}
         users: []
-        {{- if .Parameters.kubauth.enabled }}
-        oidc:
-          enabled: true
-          configUrl: {{ .Context.oidc.issuerURL }}/.well-known/openid-configuration
-          clientId: {{ $clientId }}
-          {{- if .Parameters.kubauth.privateClient }}
-          existingClientSecretName: {{ $secretName }}
-          existingClientSecretKey: clientSecret
-          {{- end }}
-          claimName: policy
-          scope:  "openid,profile,email"
-          redirectUri: https://{{ $hostConsole }}.{{ .Context.ingress.domain }}/oauth_callback
-          displayName: KUBAUTH
-        {{- end }}
-
-
-  - name: oidc-client
-    enabled: "{{ .Parameters.kubauth.enabled }}"
-    source:
-      local:
-        path: ../charts/wrapper/1.0.0
-    values:
-      body: |
-        ---
-        apiVersion: kubauth.kubotal.io/v1alpha1
-        kind: OidcClient
-        metadata:
-          name: {{ $oidcClientName }}
-        spec:
-          clientId: {{ $clientId }}   # Otherwise, client_id will be wrong if deployed on 'kubauth' namespace
-          redirectURIs:
-            - "https://{{ $hostConsole }}.{{ .Context.ingress.domain }}/oauth_callback"
-          grantTypes: [ "refresh_token", "authorization_code" ]
-          responseTypes: ["id_token", "code", "token", "id_token token", "code id_token", "code token", "code id_token token"]
-          scopes: [ "openid", "offline", "profile", "groups", "email", "offline_access", "address", "phone"]
-          displayName: Minio
-          description: S3 Server
-          entryURL: "https://{{ $hostConsole }}.{{ .Context.ingress.domain }}"
-          {{ if .Parameters.kubauth.privateClient }}
-          public: false
-          secrets:
-            - name:  {{ $secretName }}
-              key: clientSecret
-          {{ else }}
-          public: true
-          {{ end }}
-        
-        {{- if .Parameters.kubauth.privateClient }}
-        ---
-        apiVersion: v1
-        kind: Secret
-        metadata:
-          name: {{ $secretName }}
-          annotations:
-            secret-generator.v1.mittwald.de/autogenerate: clientSecret        
-        type: Opaque
-        {{- end }}
-
-
 dependencies: |
   - storage
   - ingress
   - certManager
-  {{- if .Parameters.kubauth.enabled }}
+  {{- if .Parameters.oidc.enabled }}
   - kubauth
   {{ end }}
 

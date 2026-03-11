@@ -12,8 +12,10 @@ schema:
           mode: { type: string, default: dev, enum: [ "dev", "json"] }
           level: { type: string, default: info, enum: [ "error", "info", "debug", "trace"] }
       host: { type: string, required: true }
-      tls: { type: boolean, default: true }   # Must be always set, as currently, kubauth does not allow http:// on redirect URL (except for localhost)
-      withKubauthClient: { type: boolean, default: true }
+      tls: { type: boolean, default: true }   # Must be set if kubauth is enabled, as currently, kubauth does not allow http:// on redirect URL (except for localhost)
+      kubauth:
+        properties:
+          enabled: { type: boolean, default: true }
   context:
     properties:
       ingress:
@@ -49,6 +51,8 @@ modules:
         repository: quay.io/kuboauth/charts/weboidc
         tag: 0.1.0-snapshot
     timeout: 1m
+    dependsOn:
+      - oidc-client
     values: |
       name: {{ .Parameters.name }}
       log:
@@ -63,7 +67,7 @@ modules:
       server:
         tls: {{ .Parameters.tls }}
         certificateIssuer: {{ dig "certificateIssuer" "public" "" .Context }}
-      {{- if .Parameters.withKubauthClient }}
+      {{- if .Parameters.kubauth.enabled }}
       oidc:
         clientId:
           value: {{ printf "%s-%s" .Release.spec.targetNamespace $instanceId }}
@@ -80,7 +84,7 @@ modules:
       {{- end }}
 
   - name: oidc-client
-    enabled: "{{ .Parameters.withKubauthClient }}"
+    enabled: "{{ .Parameters.kubauth.enabled }}"
     source:
       local:
         path: ../charts/wrapper/1.0.0
@@ -120,7 +124,7 @@ modules:
 
 dependencies: |
   - ingress
-  {{- if .Parameters.kubauth }}
+  {{- if .Parameters.kubauth.enabled }}
   - kubauth
   - secretGenerator
   {{- end }}
