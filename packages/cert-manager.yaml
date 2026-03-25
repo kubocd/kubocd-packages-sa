@@ -8,6 +8,7 @@ schema:
     properties:
       deployInControlPlane: { type: boolean, default: false }
       deployInServicePlane: { type: boolean, default: false }
+      enableGatewayAPI: { type: boolean, default: false } # If set, gatewayAPI must be present
       trust:
         properties:
           enabled: { type: boolean, default: false }
@@ -19,7 +20,7 @@ schema:
                   configMap:
                     properties:
                       enabled: { type: boolean, default: false }
-                      key: { type: string, default: "root-certs.pem" }
+                      key: { type: string, default: "ca.crt" }  # default: "root-certs.pem"
                   secret:
                     properties:
                       enabled: { type: boolean, default: false }
@@ -49,6 +50,10 @@ modules:
     values: |
       installCRDs: true
       enableCertificateOwnerRef: true
+      {{- if .Parameters.enableGatewayAPI }}
+      config:
+        enableGatewayAPI: true
+      {{- end }}
       image:
         {{ $redirection := imageRedirect "quay.io/jetstack/cert-manager-controller" . }}
         repository: {{ $redirection.repository }}

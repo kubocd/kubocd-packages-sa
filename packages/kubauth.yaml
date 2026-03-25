@@ -108,7 +108,7 @@ modules:
     source:
       oci:
         repository: quay.io/kubauth/charts/kubauth
-        tag: 0.2.0-snapshot
+        tag: 0.2.0
     values: |
       deployInControlPlane: {{ .Parameters.deployInControlPlane }}
       {{- if .Parameters.deployInServicePlane }}
@@ -232,6 +232,8 @@ modules:
       local:
         path: ../charts/wrapper/1.0.0
     enabled: "{{ .Parameters.kcClients.enabled }}"
+    dependsOn:
+      - noname  # For kubauth webhook
     values:
       body: |
         ---

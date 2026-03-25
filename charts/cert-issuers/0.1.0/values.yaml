@@ -29,7 +29,7 @@ bundle:
   target:
     configMap:
       enabled: false
-      key: root-certs.pem
+      key: ca.crt # root-certs.pem
     secret:
       enabled: false
       key: ca.crt

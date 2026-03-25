@@ -58,11 +58,11 @@ templateHeader: |
 
 modules:
 
-  - name: noname
+  - name: kubeconfig
     source:
       oci:
         repository: quay.io/kubauth/charts/kubauth-kubeconfig
-        tag: 0.2.0-snapshot
+        tag: 0.2.0
     dependsOn:
       - oidc-client
     values: |
@@ -158,7 +158,7 @@ modules:
     source:
       oci:
         repository: quay.io/kubauth/charts/kubauth-apiserver
-        tag: 0.1.0-snapshot
+        tag: 0.2.0
     timeout: "{{ .Parameters.patcher.apiserver.timeoutHelmRelease }}"
     values: |
       logger:
