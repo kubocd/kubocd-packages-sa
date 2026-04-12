@@ -1,0 +1,112 @@
+
+
+apiVersion: v1alpha1
+name: ingress-haproxy
+tag: 1.49.0-p01
+protected: true
+schema:
+  parameters:
+    properties:
+      deployInControlPlane: { type: boolean, default: false }
+      deployInServicePlane: { type: boolean, default: false }
+      replicaCount: { type: integer, default: 2 }
+      logLevel: { type: string, default: "info" }
+  context:
+    properties:
+      ingress:
+        required: true
+        properties:
+          # At least, one of domain and vip must be defined. vip take precedence.
+          # Vip is a workaround for the case domain does not resolve internally.
+          domain: { type: string }
+          vip: { type: string }
+          kubernetes:
+            properties:
+              enabled: { type: boolean, default: false }
+modules:
+  - name: noname
+    timeout: 2m
+    source:
+      helmRepository:
+        url: https://haproxytech.github.io/helm-charts
+        chart: kubernetes-ingress
+        version: 1.49.0
+    values: |
+      controller:
+        replicaCount: {{ .Parameters.replicaCount }}
+        {{- if .Parameters.deployInControlPlane }}
+        tolerations:
+          - key: "node-role.kubernetes.io/control-plane"
+            operator: "Exists"
+            effect: "NoSchedule"
+        nodeSelector:
+          node-role.kubernetes.io/control-plane: ""
+        {{- end }}
+        {{- if .Parameters.deployInServicePlane }}
+        tolerations:
+          - key: services.node-role.kubernetes.io
+            operator: "Equal"
+            effect: NoSchedule
+            value: services
+        nodeSelector:
+          services.node-role.kubernetes.io: "services"
+        {{- end }}
+
+        service:
+          type: LoadBalancer
+          annotations:
+            metallb.universe.tf/loadBalancerIPs: {{ resolveDNS (.Context.ingress.vip | default .Context.ingress.domain) }}
+            metallb.universe.tf/allow-shared-ip: "ingress"
+          ports:
+            http: 80
+            https: 443
+            stat: 1024
+            admin: 6060
+          # -- Stats page not exposed on LoadBalancer; use kubectl port-forward instead:
+          #    kubectl port-forward -n haproxy svc/haproxy-kubernetes-ingress 1024:1024
+          #    → http://localhost:1024
+          enablePorts:
+            http: true
+            https: true
+            quic: true
+            stat: false
+            admin: true
+        logging:
+          level: {{ .Parameters.logLevel }}
+
+
+
+  - name: kubernetes
+    enabled: "{{ dig \"ingress\" \"kubernetes\" \"enabled\" false .Context }}"
+    source:
+      local:
+        path: ../charts/wrapper/1.0.0
+    dependsOn:
+    - noname
+    values:
+      body: |
+        apiVersion: networking.k8s.io/v1
+        kind: Ingress
+        metadata:
+          name: kubernetes
+          namespace: default
+          annotations:
+            haproxy.org/ssl-passthrough: "true"
+        spec:
+          rules:
+            - host: kubernetes.{{ .Context.ingress.domain }}
+              http:
+                paths:
+                  - path: /
+                    pathType: Prefix
+                    backend:
+                      service:
+                        name: kubernetes
+                        port:
+                          number: 443
+          ingressClassName: haproxy
+dependencies:
+  - loadBalancer
+roles:
+  - ingress
+  - ingressHAProxy

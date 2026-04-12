@@ -6,3 +6,5 @@
 .charts
 tmp
 scratch
+
+.DS_Store

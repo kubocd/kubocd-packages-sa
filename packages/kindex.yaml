@@ -1,0 +1,72 @@
+
+apiVersion: v1alpha1
+name: kindex
+tag: 0.1.0-p01
+protected: true
+schema:
+  parameters:
+    properties:
+      host: { type: string, default: kindex }
+      tls: { type: boolean, default: true }
+      mode: { type: string, default: dark, enum: ["dark", "light"] }
+      deployInControlPlane: { type: boolean, default: false }
+      deployInServicePlane: { type: boolean, default: false }
+  context:
+    properties:
+      ingress:
+        required: true
+        properties:
+          className: { type: string, default: "nginx" }
+          domain: { type: string, required: true }
+      certificateIssuer:
+        required: false
+        properties:
+          public: { type: string, required: true }
+      cluster:
+        required: true
+        properties:
+          name: { type: string, required: true }
+
+modules:
+  - name: noname
+    source:
+      oci:
+        repository: quay.io/kubosa/charts/kindex
+        tag: 0.1.0-snapshot
+    timeout: 1m
+    values: |
+      {{- if .Parameters.deployInControlPlane }}
+      tolerations:
+      - key: "node-role.kubernetes.io/control-plane"
+        operator: "Exists"
+        effect: "NoSchedule"
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: ""
+      {{- end }}
+      {{- if .Parameters.deployInServicePlane }}
+      tolerations:
+        - key: services.node-role.kubernetes.io
+          operator: "Equal"
+          effect: NoSchedule
+          value: services
+      nodeSelector:
+        services.node-role.kubernetes.io: "services"
+      {{- end }}
+      ingress:
+        enabled: true
+        class: {{ .Context.ingress.className }}
+        host: {{ .Parameters.host }}.{{.Context.ingress.domain}}
+        networkPolicy:
+          enabled: {{ .Context.networkPolicies }}
+        passthrough: {{  .Parameters.tls }}
+      server:
+        tls: {{ .Parameters.tls }}
+        certificateIssuer: {{ .Context.certificateIssuer.public }}
+        mode: {{ .Parameters.mode }}
+        clusterName: {{ .Context.cluster.name }}
+
+dependencies: |
+  - ingress
+  {{- if .Parameters.tls }}
+  - certManager
+  {{- end }}

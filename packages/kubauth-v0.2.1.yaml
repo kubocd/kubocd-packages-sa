@@ -2,7 +2,7 @@
 
 apiVersion: v1alpha1
 name: kubauth
-tag: 0.2.0-p01
+tag: 0.2.1-p01
 schema:
   parameters:
     properties:
@@ -16,6 +16,10 @@ schema:
         properties:
           enabled: { type: boolean, default: false }
           privateClientSecret: { type: string, default: "changeIt" }
+          accessTokenLifespan: { type: string, default: "2m" }
+          refreshTokenLifespan: { type: string, default: "5m" }
+          idTokenLifespan: { type: string, default: "10m" }
+
       oidc:
         properties:
           logger:
@@ -108,7 +112,7 @@ modules:
     source:
       oci:
         repository: quay.io/kubauth/charts/kubauth
-        tag: 0.2.0
+        tag: 0.2.1
     values: |
       deployInControlPlane: {{ .Parameters.deployInControlPlane }}
       {{- if .Parameters.deployInServicePlane }}
@@ -251,12 +255,12 @@ modules:
           grantTypes: [ "implicit", "refresh_token", "authorization_code" ]
           {{- end }}
           responseTypes: [ "id_token", "code", "token", "id_token token", "code id_token", "code token", "code id_token token" ]
-          scopes: [ "openid", "offline", "profile", "groups", "email", "offline_access", "xxx" ]
+          scopes: [ "openid", "offline", "profile", "groups", "email", "offline_access" ]
           description: A test OIDC public client
           forceOpenIdScope: false
-          accessTokenLifespan: 5m
-          refreshTokenLifespan: 30m
-          idTokenLifespan: 5m
+          accessTokenLifespan: {{ .Parameters.kcClients.accessTokenLifespan }}
+          refreshTokenLifespan: {{ .Parameters.kcClients.refreshTokenLifespan }}
+          idTokenLifespan: {{ .Parameters.kcClients.idTokenLifespan }}
           public: true
         
         ---
@@ -274,12 +278,12 @@ modules:
           grantTypes: [ "implicit", "refresh_token", "authorization_code", "client_credentials" ]
           {{- end }}
           responseTypes: [ "id_token", "code", "token", "id_token token", "code id_token", "code token", "code id_token token" ]
-          scopes: [ "openid", "offline", "profile", "groups", "email", "offline_access", "xxx" ]
+          scopes: [ "openid", "offline", "profile", "groups", "email", "offline_access"]
           description: A test OIDC private client
           forceOpenIdScope: false
-          accessTokenLifespan: 5m
-          refreshTokenLifespan: 30m
-          idTokenLifespan: 5m
+          accessTokenLifespan: {{ .Parameters.kcClients.accessTokenLifespan }}
+          refreshTokenLifespan: {{ .Parameters.kcClients.refreshTokenLifespan }}
+          idTokenLifespan: {{ .Parameters.kcClients.idTokenLifespan }}
           public: false
           secrets:
             - name: kc-private

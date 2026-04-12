@@ -81,7 +81,11 @@ modules:
         mode: {{ .Parameters.logger.mode }}
         level: {{ .Parameters.logger.level }}
       ingress:
+        class: {{ .Context.ingress.className }}
         host: {{ .Parameters.host }}.{{ .Context.ingress.domain }}
+        class: {{ .Context.ingress.className }}
+        annotations:
+          kindex.kubotal.io/link: ":kubeconfig:To be used with 'kc init'"
       server:
         tls: {{ .Parameters.tls }}
         certificateIssuer: {{ .Context.certificateIssuer.public }}

@@ -64,6 +64,7 @@ modules:
           storageClass: {{ .Context.storageClass.data }}
         phpldapadmin:
           ingress:
+            ingressClassName: {{ .Context.ingress.className }}
             annotations:
               cert-manager.io/cluster-issuer: {{ .Context.certificateIssuer.public }}
             hosts:
