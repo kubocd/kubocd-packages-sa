@@ -16,6 +16,7 @@ spec:
     - "*.minio.{{ .Release.Namespace }}.svc.cluster.local"
     - {{ index .Values.minio.ingress.hosts 0 }}
     - {{ index .Values.minio.consoleIngress.hosts 0 }}
+    - localhost
     {{ if .Values.minio.vip.enabled }}
     - "{{ required "minio.vip.host must be defined if minio.vip.enabled" .Values.minio.vip.host }}"
     {{ end }}

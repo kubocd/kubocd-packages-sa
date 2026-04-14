@@ -1,0 +1,25 @@
+
+
+# This is the service used by clear-text ingress.
+# This is required, as HAProxy can't use the same service for several ingresses
+
+{{ if .Values.minio.clearTextIngress.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-clear-text
+  namespace: {{ .Release.Namespace  }}
+  labels:
+    app: minio-ingress-clear-text
+spec:
+  type: ClusterIP
+  ports:
+    - name: https
+      port: 9000
+      protocol: TCP
+      targetPort: 9000
+  selector:
+    app: minio
+    release: minio
+{{ end }}

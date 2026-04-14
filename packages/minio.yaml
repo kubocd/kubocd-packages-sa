@@ -1,7 +1,7 @@
 
 apiVersion: v1alpha1
 name: minio
-tag: 5.4.0-p03
+tag: 5.4.0-p04
 protected: true
 schema:
   parameters:
@@ -10,6 +10,7 @@ schema:
       deployInServicePlane: { type: boolean, default: false }
       rootUser: { type: string, required: true }
       rootPassword: { type: string, required: true }
+      issuer: { type: string, default: "internal", enum: [ "internal", "public" ]}
       storage:
         required: true
         properties:
@@ -86,7 +87,7 @@ modules:
       minio:
         rootUser: {{ .Parameters.rootUser }} 
         rootPassword: {{ .Parameters.rootPassword }} 
-        clusterIssuer: {{ .Context.certificateIssuer.internal }}
+        clusterIssuer: {{ dig "certificateIssuer" .Parameters.issuer "internal" .Context }}
         tls:
           enabled: true
           certSecret: {{ .Release.metadata.name }}-internal-tls 
@@ -116,12 +117,17 @@ modules:
         {{- end }}
         ingress:
           enabled: {{ .Parameters.ingresses.passThrough.enabled }}
+          ingressClassName: {{ .Context.ingress.className }}
+          annotations:
+            kindex.kubotal.io/link: "Minio S3 API:bucket1:To use with 'mc' command"
           hosts:
             - {{ .Parameters.ingresses.passThrough.host | default (printf "%s" .Release.metadata.name) }}.{{ .Context.ingress.domain }}
         consoleIngress:
           enabled: {{ .Parameters.ingresses.console.enabled }}
+          ingressClassName: {{ .Context.ingress.className }}
           annotations:
             cert-manager.io/cluster-issuer: {{ .Context.certificateIssuer.public }}
+            kindex.kubotal.io/link: "::Minio console"
           hosts:
             - {{ $hostConsole }}.{{ .Context.ingress.domain }}
           tls:
@@ -130,11 +136,17 @@ modules:
                 - {{ $hostConsole }}.{{ .Context.ingress.domain }}
         secondaryIngress:
           enabled: {{ .Parameters.ingresses.public.enabled }}
+          ingressClassName: {{ .Context.ingress.className }}
           clusterIssuer: {{ .Context.certificateIssuer.public }}
           host: {{ .Parameters.ingresses.public.host | default (printf "%s-public" .Release.metadata.name) }}.{{ .Context.ingress.domain }}
+          annotations:
+            kindex.kubotal.io/link: "Minio S3 API:bucket1:Secondary ingress"
         clearTextIngress:
           enabled: {{ .Parameters.ingresses.clearText.enabled }}
+          ingressClassName: {{ .Context.ingress.className }}
           host: {{ .Parameters.ingresses.clearText.host | default (printf "%s-clear-text" .Release.metadata.name) }}.{{ .Context.ingress.domain }}
+          annotations:
+            kindex.kubotal.io/link: "Minio S3 API:bucket1:Clear text ingress (UNSAFE)"
         {{- if .Parameters.vip.enabled }}
         vip:
           enabled: true

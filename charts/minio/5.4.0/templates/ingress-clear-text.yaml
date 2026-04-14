@@ -8,22 +8,26 @@ kind: Ingress
 metadata:
   name: {{ .Release.Name }}-clear-text
   namespace: {{ .Release.Namespace  }}
-  {{ if .Values.minio.clusterIssuer }}
   annotations:
+  {{ if .Values.minio.clusterIssuer }}
     # SSL on output, but not on input
     nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+    haproxy.org/server-ssl: "true"
   {{ end }}
+  {{- with .Values.minio.clearTextIngress.annotations }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
   labels:
     app: minio-ingress-clear-text
 spec:
-  ingressClassName: nginx
+  ingressClassName: {{ .Values.minio.clearTextIngress.ingressClassName }}
   rules:
     - host: {{ required "ingressHost must be defined for minio.clearTextIngress!" .Values.minio.clearTextIngress.host }}
       http:
         paths:
           - backend:
               service:
-                name: minio
+                name: {{ .Release.Name }}-clear-text
                 port:
                   number: 9000
             path: /

@@ -49,6 +49,9 @@ minio:
     annotations:
       nginx.ingress.kubernetes.io/ssl-passthrough: "true"
       nginx.ingress.kubernetes.io/proxy-body-size: 130m   # As minio put uses chunk of 128MB
+      haproxy.org/max-body-size: "0"
+      #haproxy.org/h1-accept-invalid-headers: "true"
+      haproxy.org/ssl-passthrough: "true"
     hosts:
       - # TBD
 
@@ -59,7 +62,10 @@ minio:
       nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
       nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
       nginx.ingress.kubernetes.io/proxy-body-size: 130m  # As minio put uses chunk of 128MB
-      cert-manager.io/cluster-issuer: # TBD
+      haproxy.org/max-body-size: "0"
+      #haproxy.org/h1-accept-invalid-headers: "true"
+      haproxy.org/ssl-redirect: "true"
+      haproxy.org/ssl-passthrough: "true"
     hosts:
       - # TBD
     tls:
@@ -73,14 +79,18 @@ minio:
   secondaryIngress:
     enabled: false
     clusterIssuer: # TBD
+    ingressClassName: "nginx"
     host: # TBD
     secretName: # TBD
+    annotations:
 
   # This is an ingress to access minio in plain text (No encryption).
   # Use this only for testing purpose. NEVER IN PRODUCTION
   clearTextIngress:
     enabled: false
+    ingressClassName: "nginx"
     host: # TBD
+    annotations:
 
   # This will provide a straight through access to minio, without ingress
   vip:
