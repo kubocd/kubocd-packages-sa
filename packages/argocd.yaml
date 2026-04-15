@@ -33,12 +33,10 @@ modules:
             {{- if eq .Context.ingress.className  "nginx" }}
             nginx.ingress.kubernetes.io/ssl-passthrough: "true"
             nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
-            nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
             {{- end }}
             {{- if eq .Context.ingress.className  "haproxy" }}
             haproxy.org/ssl-passthrough: "true"
             haproxy.org/ssl-redirect: "true"
-            haproxy.org/server-ssl: "true"
             {{- end }}
           ingressClassName: {{ .Context.ingress.className }}
           hostname: argocd.{{.Context.ingress.domain}}
