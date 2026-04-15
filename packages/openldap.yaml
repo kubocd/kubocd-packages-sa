@@ -30,6 +30,7 @@ schema:
         required: true
         properties:
           domain: { type: string, required: true }
+          className: { type: string, default: "nginx" }
       certificateIssuer:
         required: true
         properties:

@@ -32,7 +32,7 @@ schema:
         required: true
         properties:
           domain: { type: string, required: true }
-
+          className: { type: string, default: "nginx"}
 
 
 templateHeader: |
@@ -83,7 +83,7 @@ modules:
           storageClass: "{{ .Context.storageClass.workspace }}"
         ingress:
           enabled: true
-          className: nginx
+          className: {{ .Context.ingress.className }}
           host: "master.{{ $baseName }}.{{ .Context.ingress.domain }}"
           #    path: "/sw-master/?(.*)"
           #    pathType: ImplementationSpecific
@@ -91,6 +91,7 @@ modules:
           pathType: Prefix
           annotations:
             cert-manager.io/cluster-issuer: "{{ .Context.certificateIssuer.public }}"
+            kindex.kubotal.io/link: "Seaweed master"
           tls:
             - hosts:
                 - "master.{{ $baseName }}.{{ .Context.ingress.domain }}"
@@ -160,7 +161,7 @@ modules:
           storageClass: "{{ .Context.storageClass.workspace }}"
         ingress:
           enabled: true
-          className: nginx
+          className: {{ .Context.ingress.className }}
           host: "filer.{{ $baseName }}.{{ .Context.ingress.domain }}"
           #    path: "/sw-filer/?(.*)"
           #    pathType: ImplementationSpecific
@@ -168,6 +169,7 @@ modules:
           pathType: Prefix
           annotations:
             cert-manager.io/cluster-issuer: "{{ .Context.certificateIssuer.public }}"
+            kindex.kubotal.io/link: "Seaweed filer"
           tls:
             - hosts:
                 - "filer.{{ $baseName }}.{{ .Context.ingress.domain }}"
@@ -186,10 +188,11 @@ modules:
         enabled: true
         ingress:
           enabled: true
-          className: nginx
+          className: {{ .Context.ingress.className }}
           host: "s3.{{ $baseName }}.{{ .Context.ingress.domain }}"
           annotations:
             cert-manager.io/cluster-issuer: "{{ .Context.certificateIssuer.public }}"
+            kindex.kubotal.io/link: "Seaweed S3 API"
           tls:
             - hosts:
                 - "s3.{{ $baseName }}.{{ .Context.ingress.domain }}"
@@ -221,8 +224,10 @@ modules:
         ingress:
           enabled: true
           host: "admin.{{ $baseName }}.{{ .Context.ingress.domain }}"
+          className: {{ .Context.ingress.className }}
           annotations:
             cert-manager.io/cluster-issuer: "{{ .Context.certificateIssuer.public }}"
+            kindex.kubotal.io/link: "Seaweed admin"
           tls:
             - hosts:
                 - "admin.{{ $baseName }}.{{ .Context.ingress.domain }}"

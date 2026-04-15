@@ -61,6 +61,7 @@ schema:
         required: true
         properties:
           domain: { type: string, required: true }
+          className: { type: string, default: "nginx"}
       oidc:
         properties:
           issuerURL: { type: string, required: true }

@@ -21,6 +21,7 @@ schema:
         required: true
         properties:
           domain: { type: string, required: true }
+          className: { type: string, default: "nginx"}
 
 modules:
   - name: noname
@@ -35,7 +36,7 @@ modules:
         repository: {{ $redirection.repository }}
       ingress:
         enabled: true
-        ingressClassName: nginx
+        ingressClassName: {{ .Context.ingress.className }}
         {{- if .Parameters.tls }}
         annotations:
           cert-manager.io/cluster-issuer: {{ required ".Context.certificateIssuer.public must be defined if tls: true" .Context.certificateIssuer.public }}

@@ -33,6 +33,7 @@ schema:
         required: true
         properties:
           domain: { type: string, required: true }
+          className: { type: string, default: "nginx"}
       oidc:
         properties:
           issuerURL: { type: string, required: true }
@@ -58,6 +59,14 @@ modules:
       clusterIssuer: "{{ .Context.certificateIssuer.public }}"
       ingress:
         domain: "{{ .Context.ingress.domain }}"
+        ingressClassName: {{ .Context.ingress.className }}
+        annotations:
+          kindex.kubotal.io/link: "AIStor S3 API:bucket1:To use with 'mc' command"
+      ingressConsole:
+        domain: "{{ .Context.ingress.domain }}"
+        ingressClassName: {{ .Context.ingress.className }}
+        annotations:
+          kindex.kubotal.io/link: "::AIStor console"
       oidcClient:
         enabled: {{ .Parameters.kubauth.enabled }}
         displayName: "{{ .Parameters.kubauth.displayName }}"

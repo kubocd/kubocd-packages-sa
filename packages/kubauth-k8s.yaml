@@ -50,6 +50,11 @@ schema:
         properties:
           name: { type: string, required: true }
           key: { type: string }
+      ingress:
+        required: true
+        properties:
+          className: { type: string, default: "nginx" }
+          domain: { type: string, required: true }
 
 templateHeader: |
   {{ $secretName := "kubauth-k8s" }}
