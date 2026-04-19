@@ -1,0 +1,55 @@
+
+
+apiVersion: v1alpha1
+name: keycloak
+tag: 0.1.0-p01
+protected: false
+schema:
+  parameters:
+    properties:
+      host: { type: string, default: keycloak }
+      admin:
+        properties:
+          username: { type: string, default: "admin" }
+          password: { type: string, default: "admin" }
+      db:
+        properties:
+          password: { type: string, default: "keycloak123" }
+  context:
+    properties:
+      ingress:
+        required: true
+        properties:
+          className: { type: string, default: "nginx" }
+          domain: { type: string, required: true }
+      certificateIssuer:
+        required: true
+        properties:
+          public: { type: string, required: true }
+
+modules:
+  - name: noname
+    source:
+      local:
+        path: ../charts/keycloak/0.1.0
+    timeout: 2m
+    values: |
+      clusterIssuer: {{ .Context.certificateIssuer.public }}
+      ingress:
+        host: {{ .Parameters.host }}.{{.Context.ingress.domain}}
+        className: {{ .Context.ingress.className }}
+      db:
+        username: keycloak
+        password: {{ .Parameters.db.passwword }}
+      keycloak:
+        admin:
+          username: {{ .Parameters.admin.username }}
+          password: {{ .Parameters.admin.password }}
+
+roles:
+  - keycloak
+
+dependencies:
+  - keycloakOperator
+  - cnpg
+

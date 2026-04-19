@@ -1,0 +1,26 @@
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "baseName" . }}
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/ssl-passthrough: "true"
+    haproxy.org/ssl-passthrough: "true"
+    haproxy.org/ssl-redirect: "true"
+    ingress.kubernetes.io/ssl-passthrough: "true"
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  rules:
+    - host: {{ .Values.ingress.host }}
+      http:
+        paths:
+          - backend:
+              service:
+                name: {{ include "baseName" . }}-service
+                port:
+                  name: https
+            pathType: ImplementationSpecific
+

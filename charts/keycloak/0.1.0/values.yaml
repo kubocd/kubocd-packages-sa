@@ -1,0 +1,21 @@
+
+clusterIssuer: # TBD
+
+db:
+  username: keycloak
+  password: keycloak123
+
+ingress:
+  host: # TBD
+  className: # TBD
+
+
+keycloak:
+  admin:
+    username: admin
+    password: admin
+
+
+baseNameOverride:
+
+

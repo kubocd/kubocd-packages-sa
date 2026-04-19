@@ -1,0 +1,13 @@
+
+
+apiVersion: v1alpha1
+name: keycloak-operator
+tag: 26.6.1-p01
+protected: false
+modules:
+  - name: noname
+    source:
+      local:
+        path: ../charts/keycloak-operator/26.6.1
+roles:
+  - keycloakOperator

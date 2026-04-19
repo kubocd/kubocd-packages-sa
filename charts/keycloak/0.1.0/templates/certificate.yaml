@@ -1,0 +1,15 @@
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ include "baseName" . }}-tls
+  namespace: {{ .Release.Namespace }}
+spec:
+  dnsNames:
+    - {{ .Values.ingress.host }}
+    - localhost
+    - 127.0.0.1
+  secretName: {{ include "baseName" . }}-tls
+  issuerRef:
+    kind: ClusterIssuer
+    name: {{ .Values.clusterIssuer}}
