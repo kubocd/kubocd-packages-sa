@@ -1,0 +1,72 @@
+
+apiVersion: v1alpha1
+name: kubauth-upstream-providers
+tag: 0.3.0-p01
+schema:
+  parameters:
+    properties:
+      upstreamProviders:
+        items:
+          properties:
+            name: { type: string, required: true }
+            enabled: { type: boolean, default: true }
+            type: { type: string, enum: [ "oidc", "internal" ], required: true }
+            displayName: { type: string, default: "Sign in on keycloak" }
+            clientSpecific: { type: boolean, default: false }
+            issuerURL: { type: string }
+            certificateAuthority:
+              properties:
+                secret:
+                  properties:
+                    name: { type: string, required: true }
+                    key: { type: string, required: true }
+                configMap:
+                  properties:
+                    name: { type: string, required: true }
+                    key: { type: string, required: true }
+            insecureSkipVerify: { type: boolean, default: false }
+            redirectURL: { type: string }
+            clientId: { type: string }
+            clientSecret: { type: string }
+            scopes:
+              items:
+                type: string
+            useUserInfo: { type: boolean, default: false }
+            claimRenamings:
+              items:
+                properties:
+                  oldName: { type: string, required: true}
+                  newName: { type: string, required: true}
+                  operation: { type: string, required: true, enum: [ "copy", "rename" ]}
+            claimRemovals:
+              items:
+                type: string
+            localEnrichment: { type: boolean, default: true }
+            explicitConfig:
+              properties:
+                authorization_endpoint: { type: string }
+                end_session_endpoint: { type: string }
+                id_token_signing_alg_values_supported:
+                  items:
+                    type: string
+                introspection_endpoint: { type: string }
+                jwks_uri: { type: string }
+                token_endpoint: { type: string }
+                userinfo_endpoint: { type: string }
+                device_authorization_endpoint: { type: string }
+            dumpExchanges: { type: boolean, default: false }
+
+modules:
+  - name: noname
+    source:
+      oci:
+        repository: quay.io/kubauth/charts/kubauth-upstream-providers
+        tag: 0.3.0-snapshot
+    values: |
+      {{- with .Parameters.upstreamProviders }}
+      upstreamProviders:
+        {{- toYaml . | nindent 6 }}
+      {{- end }}
+
+dependencies:
+  - kubauth

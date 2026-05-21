@@ -1,7 +1,7 @@
 
 apiVersion: v1alpha1
 name: kubauth-users
-tag: 0.2.0-p01
+tag: 0.3.0-p01
 schema:
   parameters:
     properties:
@@ -49,7 +49,7 @@ modules:
     source:
       oci:
         repository: quay.io/kubauth/charts/kubauth-users
-        tag: 0.2.0
+        tag: 0.3.0-snapshot
     values: |
       {{- with .Parameters.users }}
       users:

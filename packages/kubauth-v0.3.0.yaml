@@ -38,6 +38,11 @@ schema:
           jwtAccessToken: { type: boolean, default: false }
           clientPrivilegedNamespace: { type: string }
           defaultStyle: { type: string, default: "dark" }
+          upstreamProviders:
+            properties:
+              internalWelcomeMessage: { type: string, default: "Local login"}
+              dumpUpstreamClaims: { type: boolean, default: false }
+
 
       audit:
         properties:
