@@ -28,6 +28,10 @@ schema:
             redirectURL: { type: string }
             clientId: { type: string }
             clientSecret: { type: string }
+            clientSecretRef:
+              properties:
+                name: { type: string, required: true }
+                key: { type: string, required: true }
             scopes:
               items:
                 type: string

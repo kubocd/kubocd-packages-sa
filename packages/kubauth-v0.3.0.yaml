@@ -38,11 +38,8 @@ schema:
           jwtAccessToken: { type: boolean, default: false }
           clientPrivilegedNamespace: { type: string }
           defaultStyle: { type: string, default: "dark" }
-          upstreamProviders:
-            properties:
-              internalWelcomeMessage: { type: string, default: "Local login"}
-              dumpUpstreamClaims: { type: boolean, default: false }
-
+          defaultLoginLabel: { type: string, default: "Welcome" }
+          dumpUpstreamClaims: { type: boolean, default: false }
 
       audit:
         properties:
@@ -160,9 +157,12 @@ modules:
           mode: {{ .Parameters.oidc.sso.mode }}
         allowPasswordGrant: {{ .Parameters.oidc.allowPasswordGrant }}
         enforcePKCE: {{ .Parameters.oidc.enforcePKCE }}
+        dumpExchanges: {{ .Parameters.oidc.dumpExchanges }}
         jwtAccessToken: {{ .Parameters.oidc.jwtAccessToken }}
         clientPrivilegedNamespace: {{ .Parameters.oidc.clientPrivilegedNamespace }}
         defaultStyle: {{ .Parameters.oidc.defaultStyle }}
+        defaultLoginLabel: {{ .Parameters.oidc.defaultLoginLabel }}
+        dumpUpstreamClaims: {{ .Parameters.oidc.dumpUpstreamClaims }}         
         idProvider:
           {{- if .Parameters.audit.enabled }}
           baseURL: http://localhost:6805
