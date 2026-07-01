@@ -1,0 +1,61 @@
+
+
+apiVersion: v1alpha1
+name: pg-demo-app
+tag: 0.1.0-p01
+protected: false
+schema:
+  parameters:
+    properties:
+      host: { type: string, default: "pg-demo-app" }
+      postgresql:
+        properties:
+          host: { type: string, required: true }
+          port: { type: integer, default: 5432 }
+          dbName: { type: string, required: true }
+          dbOwner: { type: string, required: true }
+          passwordSecret:
+            properties:
+              name: { type: string, required: true }
+              key: { type: string, default: password}
+
+  context:
+    properties:
+      ingress:
+        required: true
+        properties:
+          className: { type: string, default: "nginx"}
+          domain: { type: string, required: true }
+      certificateIssuer:
+        required: true
+        properties:
+          public: { type: string, required: true }
+
+modules:
+  - name: noname
+    source:
+      oci:
+        repository: quay.io/kubosa/charts/pg-demo-app
+        tag: 0.1.0-snapshot
+    values: |
+      app:
+        image:
+          pullPolicy: Always
+      
+      postgresql:
+        host: {{ .Parameters.postgresql.host }}
+        port: {{ .Parameters.postgresql.port }}
+        dbName: {{ .Parameters.postgresql.dbName }}
+        dbOwner: {{ .Parameters.postgresql.dbOwner }}
+        passwordSecret:
+          name: {{ .Parameters.postgresql.passwordSecret.name }}
+          key: {{ .Parameters.postgresql.passwordSecret.key }}
+      
+      ingress:
+        ingressClass: {{ .Context.ingress.className }}
+        host: {{ .Parameters.host}}.{{ .Context.ingress.domain }}
+        tls:
+          clusterIssuer: {{ .Context.certificateIssuer.public }}
+      
+      
+      

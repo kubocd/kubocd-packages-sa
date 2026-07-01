@@ -12,6 +12,7 @@ schema:
       replicaCount: { type: integer, default: 2 }
       deployInControlPlane: { type: boolean, default: true }
       deployInServicePlane: { type: boolean, default: true }
+      imagePullPolicy: { type: string, default: "IfNotPresent" }
 modules:
   - name: noname
     source:
@@ -20,9 +21,7 @@ modules:
         tag: v0.3.1-snapshot
     values: |
       image:
-        {{ $redirection := imageRedirect "quay.io/kubocd/kubocd" . }}
-        repository: {{ $redirection.repository }}
-        pullPolicy: Always
+        pullPolicy: {{ .Parameters.imagePullPolicy }}
       webhook:
         replicaCount: {{ .Parameters.replicaCount }}
         deployInControlPlane: {{ .Parameters.deployInControlPlane }}

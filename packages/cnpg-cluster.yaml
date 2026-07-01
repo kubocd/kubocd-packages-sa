@@ -1,0 +1,50 @@
+
+
+apiVersion: v1alpha1
+name: cnpg-cluster
+tag: 0.1.0-p01
+schema:
+  parameters:
+    properties:
+      name: { type: string, required: true }
+      size: { type: string, default: "1Gi" }
+      instances: { type: integer, default: 1 }
+      enableSuperuserAccess: { type: boolean, default: false }
+      database:
+        properties:
+          name: { type: string, required: true }
+          owner: { type: string }
+  context:
+    properties:
+      storageClass:
+        required: true
+        properties:
+          data: { type: string, required: true }
+
+modules:
+  - name: noname
+    source:
+      local:
+        path: ../charts/wrapper/1.0.0
+    values:
+      body: |
+        apiVersion: postgresql.cnpg.io/v1
+        kind: Cluster
+        metadata:
+          name: {{ .Parameters.name }}
+        spec:
+          instances: {{ .Parameters.instances }}
+          storage:
+            storageClass: {{ .Context.storageClass.data }}
+            size: {{ .Parameters.size }}
+          enableSuperuserAccess: {{ .Parameters.enableSuperuserAccess }}
+          {{- if .Parameters.database }}
+          bootstrap:
+            initdb:
+              database: {{ .Parameters.database.name }}
+              {{- with .Parameters.database.owner }}
+              owner: {{ . }}
+              {{- end }}
+          {{- end }}
+dependencies:
+  - cnpg
