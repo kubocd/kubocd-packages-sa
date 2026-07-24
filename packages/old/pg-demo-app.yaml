@@ -15,6 +15,7 @@ schema:
           dbName: { type: string, required: true }
           dbOwner: { type: string, required: true }
           passwordSecret:
+            required: true
             properties:
               name: { type: string, required: true }
               key: { type: string, default: password}

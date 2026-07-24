@@ -1,7 +1,7 @@
 
 apiVersion: v1alpha1
 name: metallb
-tag: 0.14.9-c01
+tag: 0.14.9-p02
 protected: true
 schema:
   parameters:
@@ -16,12 +16,21 @@ schema:
             effect: { type: string, required: false }
             value: { type: string, required: false }
             tolerationSeconds: { type: integer, required: false }
-      pool:
+  context:
+    properties:
+      # One of cluster.domain or metallb.pool must be defined. If both, metallb pool take precedence
+      cluster:
         required: false
         properties:
-          first: { type: string, required: true }
-          last: { type: string, required: true }
-
+          domain: { type: string, required: true }
+      loadBalancer:
+        required: false
+        properties:
+          pool:
+            required: true
+            properties:
+              first: { type: string, required: true }
+              last: { type: string, required: true }
 modules:
   - name: noname
     timeout: 4m
@@ -75,21 +84,18 @@ modules:
       local:
         path: ../charts/metallb-pool/0.1.0
     values: |
-      {{- if .Parameters.pool }}
-        - first: {{ resolveDNS (.Parameters.pool.first) }}
-          last:  {{ resolveDNS (.Parameters.pool.last) }}
-      {{- else if .Inputs.cluster }}
+      {{- if .Context.loadBalancer }}
       ipRanges:
-        - first: {{ resolveDNS ( printf "first.pool.%s" .Inputs.cluster.domain ) }}
-          last:  {{ resolveDNS ( printf "last.pool.%s" .Inputs.cluster.domain ) }}
+        - first: {{ resolveDNS (.Context.loadBalancer.pool.first) }}
+          last:  {{ resolveDNS (.Context.loadBalancer.pool.last) }}
+      {{- else if .Context.cluster }}
+      ipRanges:
+        - first: {{ resolveDNS ( printf "first.pool.%s" .Context.cluster.domain ) }}
+          last:  {{ resolveDNS ( printf "last.pool.%s" .Context.cluster.domain ) }}
       {{- else }}
-        {{ fail "At least one of .Parameters.pool... or .Inputs.cluster.domain must be defined" }} 
+        {{ fail "At least one of .Context.metallb.pool or .Context.cluster.domain must be defined" }} 
       {{- end }}
     dependsOn:
       - noname
-
-inputs:
-  - interface: cluster
-
-outputs:
-  - interface: load-balancer
+roles:
+  - loadBalancer
