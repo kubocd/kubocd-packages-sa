@@ -1,0 +1,20 @@
+
+
+apiVersion: v1alpha1
+name: cnpg
+tag: 0.27.0-c01
+description: |
+  PostgresSQL operator
+protected: true
+
+modules:
+  - name: noname
+    source:
+      helmRepository:
+        url: https://cloudnative-pg.github.io/charts
+        chart: cloudnative-pg
+        version: 0.27.0
+
+outputs:
+  - interface: cnpg
+    kind: ClusterConnection

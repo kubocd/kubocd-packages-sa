@@ -31,7 +31,7 @@ modules:
 
 outputs:
   - interface: redis-access
-    kind: ClusterConnection
+    kind: Connection
     values:
       host: "{{ printf \"%s-master\" .Release.metadata.name }}.{{ .Release.spec.targetNamespace | default .Release.metadata.namespace }}.svc"
       password: "{{ .Parameters.password }}"

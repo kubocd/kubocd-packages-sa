@@ -1,0 +1,48 @@
+
+
+apiVersion: v1alpha1
+name: pg-demo-app
+tag: 0.1.0-c01
+protected: false
+schema:
+  parameters:
+    properties:
+      host: { type: string }
+      dbRelease: { type: string }
+
+templateHeader: |
+  {{- $uiHost :=  .Parameters.host | default (printf "%s-%s" .Release.metadata.name .Release.metadata.namespace) -}}
+
+modules:
+  - name: noname
+    source:
+      oci:
+        repository: quay.io/kubosa/charts/pg-demo-app
+        tag: 0.1.0-snapshot
+    values: |
+      app:
+        image:
+          pullPolicy: Always
+      postgresql:
+        host: {{ .Inputs.postgresql.host }}
+        port: {{ .Inputs.postgresql.port }}
+        dbName: {{ .Inputs.postgresql.dbName }}
+        dbOwner: {{ .Inputs.postgresql.dbOwner }}
+        passwordSecret:
+          name: {{ .Inputs.postgresql.passwordSecret.name }}
+          key: {{ .Inputs.postgresql.passwordSecret.key }}
+      
+      ingress:
+        ingressClass: {{ .Inputs.ingress.className }}
+        host: {{ $uiHost }}.{{ .Inputs.ingress.domain }}
+        tls:
+          clusterIssuer: {{ .Inputs.certManager.clusterIssuers.public }}
+      
+inputs:
+  - interface: ingress
+  - interface: cert-manager
+    alias: certManager
+  - interface: cnpg-db
+    alias: postgresql
+    release:
+      name: "{{ .Parameters.dbRelease }}"

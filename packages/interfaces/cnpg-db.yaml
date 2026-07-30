@@ -1,0 +1,22 @@
+
+apiVersion: kubocd.kubotal.io/v1alpha1
+kind: ClusterInterface
+metadata:
+  name: cnpg-db
+  namespace: app1
+spec:
+  schema:
+    properties:
+      host: { type: string, required: true }
+      port: { type: integer, default: 5432 }
+      dbName: { type: string, required: true }
+      dbOwner: { type: string, required: true }
+      passwordSecret:
+        required: true
+        properties:
+          namespace: { type: string, required: true }
+          name: { type: string, required: true }
+          key: { type: string, default: password}
+
+
+

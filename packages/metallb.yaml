@@ -93,3 +93,4 @@ inputs:
 
 outputs:
   - interface: load-balancer
+    kind: ClusterConnection

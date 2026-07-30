@@ -1,0 +1,16 @@
+
+apiVersion: kubocd.kubotal.io/v1alpha1
+kind: ClusterInterface
+metadata:
+  name: storage-block
+spec:
+  schema:
+    properties:
+      storageClasses:
+        required: true
+        properties:
+          data: { type: string, required: true }
+          workspace: { type: string, required: true }
+
+
+

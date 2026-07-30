@@ -1,0 +1,67 @@
+
+
+apiVersion: v1alpha1
+name: cnpg-cluster
+tag: 0.1.0-c01
+schema:
+  parameters:
+    properties:
+      clusterName: { type: string, required: false }
+      size: { type: string, default: "1Gi" }
+      instances: { type: integer, default: 1 }
+      enableSuperuserAccess: { type: boolean, default: false }
+      database:
+        properties:
+          name: { type: string, required: true }
+          owner: { type: string }
+
+templateHeader: |
+  {{- $clusterName :=  .Parameters.clusterName | default (printf "%s-%s" .Release.metadata.name .Release.metadata.namespace) -}}
+
+modules:
+  - name: noname
+    source:
+      local:
+        path: ../charts/wrapper/1.0.0
+    values:
+      body: |
+        apiVersion: postgresql.cnpg.io/v1
+        kind: Cluster
+        metadata:
+          name: {{ $clusterName }}
+        spec:
+          instances: {{ .Parameters.instances }}
+          storage:
+            storageClass: {{ .Inputs.storage.storageClasses.data }}
+            size: {{ .Parameters.size }}
+          enableSuperuserAccess: {{ .Parameters.enableSuperuserAccess }}
+          {{- if .Parameters.database }}
+          bootstrap:
+            initdb:
+              database: {{ .Parameters.database.name }}
+              {{- with .Parameters.database.owner }}
+              owner: {{ . }}
+              {{- end }}
+          {{- end }}
+
+inputs:
+  - interface: cnpg
+  - interface: storage-block
+    alias: storage
+
+outputs:
+  - interface: cnpg-cluster
+    values:
+      clusterName: "{{ $clusterName }}"
+
+  - interface: cnpg-db
+    disabled: "{{ if .Parameters.database }}false{{else}}true{{end}}"
+    values: |
+      {{- if .Parameters.database }}
+      host: {{ $clusterName }}-rw.{{ .Release.spec.targetNamespace }}.svc
+      dbName: {{ (.Parameters.database).name }}
+      dbOwner: {{ (.Parameters.database).owner | default (.Parameters.database).name }}
+      passwordSecret:
+        namespace: {{ .Release.spec.targetNamespace }}
+        name: {{ $clusterName }}-app
+      {{- end }}

@@ -1,0 +1,57 @@
+---
+apiVersion: v1alpha1
+name: commander
+tag: v0.9.1-c01
+description: Redis front UI
+templateHeader: | 
+  {{- $uiHost :=  .Parameters.host | default (printf "%s-%s" .Release.metadata.name .Release.metadata.namespace) -}}
+usage:
+  text: |
+    Redis UI can be accessed using {{if .Parameters.tls}}https{{else}}http{{end}}://{{ $uiHost }}.{{.Inputs.ingress.domain}}
+schema:
+  parameters:
+    properties:
+      redis:
+        properties:
+          release: { type: string, required: false}
+      tls: { type: boolean, default: false }
+      host: { type: string, required: false }
+
+modules:
+  - name: noname
+    source:
+      git:
+        url: https://github.com/joeferner/redis-commander.git
+        path: ././k8s/helm-chart/redis-commander
+        tag: v0.9.1
+    values: |
+      redis:
+        host: {{ .Inputs.redis.host }}
+        password: {{ .Inputs.redis.password }}
+      ingress:
+        enabled: true
+        className: {{ .Inputs.ingress.className }}
+        {{- if .Parameters.tls }}
+        annotations:
+          cert-manager.io/cluster-issuer: {{ required ".Inputs.certManager.clusterIssuers.public must be defined if tls: true" .Inputs.certManager.clusterIssuers.public }}
+        {{- end }}
+        hosts:
+          - host: {{ $uiHost }}.{{.Inputs.ingress.domain}}
+            paths:
+              - "/"
+        {{- if .Parameters.tls }}
+        tls:
+          - secretName: {{ .Release.metadata.name }}-tls
+            hosts:
+              - {{ $uiHost }}.{{.Inputs.ingress.domain}}
+        {{- end }}
+
+inputs:
+  - interface: ingress
+  - interface: cert-manager
+    alias: certManager
+  - interface: redis-access
+    release:
+      name: "{{ (.Parameters.redis).release }}"
+    alias: redis
+

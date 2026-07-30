@@ -1,0 +1,14 @@
+
+apiVersion: kubocd.kubotal.io/v1alpha1
+kind: ClusterInterface
+metadata:
+  name: ingress
+spec:
+  schema:
+    properties:
+      className: { type: string, required: true }
+      domain: { type: string, required: true, description: "Used for FQDN building." }
+
+
+
+

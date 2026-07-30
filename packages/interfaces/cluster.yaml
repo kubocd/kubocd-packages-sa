@@ -1,0 +1,17 @@
+
+apiVersion: kubocd.kubotal.io/v1alpha1
+kind: ClusterInterface
+metadata:
+  name: cluster
+spec:
+  description: "To provide our Kubernetes cluster global values"
+  schema:
+    properties:
+      name: { type: string, required: true, description: "The cluster name" }
+      domain: { type: string, required: true, description: "Used for FQDN building." }
+      apiServerURL: { type: string, required: true, description: "API server endpoint from outside" }
+      hostNetworkCidr: { type: string, required: false, description: "Required for networkPolicies for webhook" }
+      networkPolicies: { type: boolean, default: false, description: "Do this cluster use network policies"}
+
+
+

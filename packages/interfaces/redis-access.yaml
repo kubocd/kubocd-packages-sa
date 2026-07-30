@@ -1,0 +1,12 @@
+apiVersion: kubocd.kubotal.io/v1alpha1
+kind: ClusterInterface
+metadata:
+  name: redis-access
+spec:
+  schema:
+    properties:
+      host: { type: string, required: true }
+      password: { type: string, required: true }
+
+
+

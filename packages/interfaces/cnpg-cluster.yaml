@@ -1,0 +1,12 @@
+
+apiVersion: kubocd.kubotal.io/v1alpha1
+kind: ClusterInterface
+metadata:
+  name: cnpg-cluster
+spec:
+  schema:
+    properties:
+      clusterName: { type: string, required; true }
+
+
+
