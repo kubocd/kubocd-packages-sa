@@ -1,0 +1,24 @@
+
+apiVersion: v1alpha1
+name: app-workspace
+tag: 0.1.0-c01
+protected: false
+schema:
+  parameters:
+    properties:
+      projectId:  { type: string, required: true }
+
+modules:
+  - name: workspace
+    source:
+      local:
+        path: ../charts/app-workspace/0.1.0
+    values: |
+      baseNamespace: {{ .Parameters.projectId }}
+
+outputs:
+  - interface: app-workspace
+    Kind: ClusterConnection
+    values:
+      userNamespace: "{{ .Parameters.projectId }}-user"
+      sysNamespace: "{{ .Parameters.projectId }}-system"

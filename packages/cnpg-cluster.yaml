@@ -10,6 +10,7 @@ schema:
       size: { type: string, default: "1Gi" }
       instances: { type: integer, default: 1 }
       enableSuperuserAccess: { type: boolean, default: false }
+      exposeCluster: { type: boolean, default: false }
       database:
         properties:
           name: { type: string, required: true }
@@ -51,6 +52,7 @@ inputs:
 
 outputs:
   - interface: cnpg-cluster
+    disabled: "{{ not .Parameters.exposeCluster }}"
     values:
       clusterName: "{{ $clusterName }}"
 

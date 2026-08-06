@@ -1,0 +1,31 @@
+apiVersion: kubocd.kubotal.io/v1alpha1
+kind: ClusterInterface
+metadata:
+  name: ldap
+spec:
+  schema:
+    properties:
+      host: { type: string, required: true }
+      insecureNoSSL: { type: boolean, required: true }
+      rootCaSecret: { type: string, required: true }
+      bindDN: { type: string, required: true }
+      bindPW: { type: string, required: true }
+      groupSearch:
+        required: true
+        properties:
+          baseDN: { type: string, required: true }
+          filter: { type: string, required: true }
+          linkGroupAttr: { type: string, required: true }
+          linkUserAttr: { type: string, required: true }
+          nameAttr: { type: string, required: true }
+      timeoutSec: { type: integer, required: true }
+      userSearch:
+        required: true
+        properties:
+          baseDN: { type: string, required: true }
+          cnAttr: { type: string, required: true }
+          emailAttr: { type: string, required: true }
+          filter: { type: string, required: true }
+          loginAttr: { type: string, required: true }
+          numericalIdAttr: { type: string, required: true }
+

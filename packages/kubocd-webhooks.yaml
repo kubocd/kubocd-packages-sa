@@ -1,0 +1,45 @@
+
+
+apiVersion: v1alpha1
+name: kubocd-webhooks
+tag: v0.4.0-c01
+protected: true
+description: |
+  Second stage of kubocd deployment.
+schema:
+  parameters:
+    properties:
+      replicaCount: { type: integer, default: 2 }
+      deployInControlPlane: { type: boolean, default: true }
+      deployInServicePlane: { type: boolean, default: true }
+      imagePullPolicy: { type: string, default: "IfNotPresent" }
+modules:
+  - name: noname
+    source:
+      oci:
+        repository: quay.io/kubosa/charts/kubocd-wh
+        tag: v0.4.0-snapshot
+    values: |
+      image:
+        pullPolicy: {{ .Parameters.imagePullPolicy }}
+      webhook:
+        replicaCount: {{ .Parameters.replicaCount }}
+        deployInControlPlane: {{ .Parameters.deployInControlPlane }}
+        {{- if .Parameters.deployInServicePlane }}
+        tolerations:
+          - key: services.node-role.kubernetes.io
+            operator: "Equal"
+            effect: NoSchedule
+            value: services
+        nodeSelector:
+          services.node-role.kubernetes.io: "services"
+        {{- end }}
+        logger:
+          mode: dev
+          level: debug
+        metrics:
+          enabled: false
+          secured: false
+
+inputs:
+  - interface: cert-manager

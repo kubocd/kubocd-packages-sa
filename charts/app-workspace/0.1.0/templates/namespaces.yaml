@@ -1,0 +1,20 @@
+
+{{- if .Values.createNamespace }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ include "sysNamespace" . }}
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ include "userNamespace" . }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ include "kubocdNamespace" . }}
+
+{{- end }}

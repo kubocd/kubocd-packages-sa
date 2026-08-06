@@ -1,0 +1,25 @@
+
+
+apiVersion: v1alpha1
+name: namespace
+tag: 0.1.0-c01
+schema:
+  parameters:
+    properties:
+      name: { type: string, required: false }
+
+modules:
+  - name: noname
+    source:
+      local:
+        path: ../charts/wrapper/1.0.0
+    values:
+      body: |
+        apiVersion: v1
+        kind: Namespace
+        metadata:
+          name: {{ .Parameters.name | default .Release.metadata.name }}
+        
+outputs:
+  - interface: namespace
+    kind: ClusterConnection

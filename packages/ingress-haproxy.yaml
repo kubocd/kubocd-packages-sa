@@ -1,0 +1,77 @@
+
+
+apiVersion: v1alpha1
+name: ingress-haproxy
+tag: 1.49.0-c01
+protected: true
+schema:
+  parameters:
+    properties:
+      deployInControlPlane: { type: boolean, default: false }
+      deployInServicePlane: { type: boolean, default: false }
+      replicaCount: { type: integer, default: 2 }
+      logLevel: { type: string, default: "info" }
+      vip: { type: string }
+
+modules:
+  - name: noname
+    timeout: 2m
+    source:
+      helmRepository:
+        url: https://haproxytech.github.io/helm-charts
+        chart: kubernetes-ingress
+        version: 1.49.0
+    values: |
+      controller:
+        replicaCount: {{ .Parameters.replicaCount }}
+        {{- if .Parameters.deployInControlPlane }}
+        tolerations:
+          - key: "node-role.kubernetes.io/control-plane"
+            operator: "Exists"
+            effect: "NoSchedule"
+        nodeSelector:
+          node-role.kubernetes.io/control-plane: ""
+        {{- end }}
+        {{- if .Parameters.deployInServicePlane }}
+        tolerations:
+          - key: services.node-role.kubernetes.io
+            operator: "Equal"
+            effect: NoSchedule
+            value: services
+        nodeSelector:
+          services.node-role.kubernetes.io: "services"
+        {{- end }}
+
+        service:
+          type: LoadBalancer
+          annotations:
+            metallb.universe.tf/loadBalancerIPs: {{ resolveDNS (.Parameters.vip | default (printf "ingress.%s" .Inputs.cluster.domain) ) }}
+            metallb.universe.tf/allow-shared-ip: "ingress"
+          ports:
+            http: 80
+            https: 443
+            stat: 1024
+            admin: 6060
+          # -- Stats page not exposed on LoadBalancer; use kubectl port-forward instead:
+          #    kubectl port-forward -n haproxy svc/haproxy-kubernetes-ingress 1024:1024
+          #    → http://localhost:1024
+          enablePorts:
+            http: true
+            https: true
+            quic: true
+            stat: false
+            admin: true
+        logging:
+          level: {{ .Parameters.logLevel }}
+
+inputs:
+  - interface: load-balancer
+  - interface: cluster
+
+outputs:
+  - interface: ingress
+    kind: ClusterConnection
+    values:
+      className: haproxy
+      domain: ingress.{{ .Inputs.cluster.domain }}
+

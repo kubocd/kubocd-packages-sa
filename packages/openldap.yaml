@@ -1,0 +1,173 @@
+
+apiVersion: v1alpha1
+name: openldap
+tag: 4.3.3-c01
+protected: true
+schema:
+  parameters:
+    properties:
+      deployInControlPlane: { type: boolean, default: false }
+      deployInServicePlane: { type: boolean, default: false }
+      ldapDomain: { type: string, required: true }
+      replicaCount: { type: integer, default: 2 }
+      admin:
+        properties:
+          user: { type: string, default: admin }
+          password: { type: string, required: true }
+      config:
+        properties:
+          user: { type: string, default: admin }
+          password: { type: string, required: true }
+      adminIngressHost: { type: string, default: phpldapadmin }
+      ldapIngressHost: { type: string, default: ldap }
+      customLdifFiles:
+        type: object
+        additionalProperties: true
+        properties: {}
+
+
+templateHeader: |
+  {{- $ldapRoot := printf "dc=%s" (splitList "." .Parameters.ldapDomain | join ",dc=") -}}
+
+modules:
+  - name: noname
+    timeout: 4m
+    source:
+      local:
+        path: ../charts/openldap/4.3.3
+    values: |
+      openldap-stack-ha:
+        replicaCount: {{ .Parameters.replicaCount }}
+        replication:
+          enabled: {{ if ne .Parameters.replicaCount 1.0 }}true{{else}}false{{end}}
+          tls_reqcert: never    # Must be 'never', otherwise sync issue between replicas. To investigate. (cf 4.2.2 where it is the default in the values file)
+        clusterIssuer: {{ .Inputs.certManager.clusterIssuers.public }}
+        global:
+          ldapDomain: {{ .Parameters.ldapDomain }}
+          adminUser: {{ .Parameters.admin.user }}
+          adminPassword: {{ .Parameters.admin.password }}
+          configUser: {{ .Parameters.config.user }}
+          configPassword: {{ .Parameters.config.password }}
+        initTLSSecret:
+          tls_enabled: true
+          secret: {{ .Release.metadata.name }}-cert
+        persistence:
+          storageClass: {{ .Inputs.storage.storageClasses.data }}
+        phpldapadmin:
+          ingress:
+            ingressClassName: {{ .Inputs.ingress.className }}
+            annotations:
+              cert-manager.io/cluster-issuer: {{ .Inputs.certManager.clusterIssuers.public }}
+            hosts:
+              - {{ .Parameters.adminIngressHost }}.{{ .Inputs.ingress.domain }}
+            tls:
+              - hosts:
+                  - {{ .Parameters.adminIngressHost }}.{{ .Inputs.ingress.domain }}
+                secretName: phpldapadmin-tls
+          {{- if .Parameters.deployInControlPlane }}
+          tolerations:
+          - key: "node-role.kubernetes.io/control-plane"
+            operator: "Exists"
+            effect: "NoSchedule"
+          nodeSelector:
+            node-role.kubernetes.io/control-plane: ""
+          {{- end }}
+          {{- if .Parameters.deployInServicePlane }}
+          tolerations:
+            - key: services.node-role.kubernetes.io
+              operator: "Equal"
+              effect: NoSchedule
+              value: services
+          nodeSelector:
+            services.node-role.kubernetes.io: "services"
+          {{- end }}
+        service:
+          {{ $ldap := printf "%s.%s" .Parameters.ldapIngressHost .Inputs.cluster.domain }}
+          annotations:
+            metallb.universe.tf/loadBalancerIPs: {{ resolveDNS $ldap }}
+          hosts:
+            - {{ $ldap }}
+        {{- if .Parameters.deployInControlPlane }}
+        tolerations:
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoSchedule"
+        nodeSelector:
+          node-role.kubernetes.io/control-plane: ""
+        {{- end }}
+        {{- if .Parameters.deployInServicePlane }}
+        tolerations:
+          - key: services.node-role.kubernetes.io
+            operator: "Equal"
+            effect: NoSchedule
+            value: services
+        nodeSelector:
+          services.node-role.kubernetes.io: "services"
+        {{- end }}
+        # Custom openldap configuration files used to override default settings
+        # DO NOT FORGET to put the Root Organisation object as it won't be created while using customLdifFiles
+        # To generate passwords: 'slappasswd -s myPassword' on an ldap node
+        customLdifFiles:
+          {{ toYaml .Parameters.customLdifFiles | nindent 10 }}
+
+usage:
+  html: |
+    {{ .Release.metadata.name }} LDAP server
+    <ul>
+    <li>
+    A console can be accessed using <a href="{{ .Parameters.adminIngressHost }}.{{ .Inputs.ingress.domain }}">this link</a>
+    </li>
+    <li>
+    You can access the LDAP services using the following parameters:
+    <ul>
+    <li>host: {{ printf "%s.%s" .Parameters.ldapIngressHost .Inputs.cluster.domain }}</li>
+    <li>port: 636 (LDAPS)</li>
+    <li>login: cn={{.Parameters.admin.user}},{{$ldapRoot}}</li>
+    <li>Password: {{.Parameters.admin.password }}</li>
+    </ul>
+    </li>
+    </ul>
+  markdown: |
+    {{ .Release.metadata.name }} LDAP server
+
+    A console can be accessed using [this link]({{ .Parameters.adminIngressHost }}.{{ .Inputs.ingress.domain }})
+
+    You can access the LDAP services using the following parameters:
+    
+    - host: {{ printf "%s.%s" .Parameters.ldapIngressHost .Inputs.cluster.domain }}
+    - port: 636 (LDAPS)
+    - login: cn={{.Parameters.admin.user}},{{$ldapRoot}}
+    - Password: {{.Parameters.admin.password }}
+  
+inputs:
+  - interface: ingress
+  - interface: storage-block
+    alias: storage
+  - interface: cert-manager
+    alias: certManager
+  - interface: cluster
+
+
+outputs:
+  - interface: ldap
+    kind: ClusterConnection
+    values: |
+      host: {{ .Release.metadata.name }}.{{ .Release.spec.targetNamespace }}.svc
+      insecureNoSSL: false
+      rootCaSecret: certs-bundle
+      bindDN: cn=admin,{{$ldapRoot}}
+      bindPW: {{.Parameters.admin.password }}
+      groupSearch:
+        baseDN: ou=Groups,{{$ldapRoot}}
+        filter: (objectClass=posixgroup)
+        linkGroupAttr: memberUid
+        linkUserAttr: uid
+        nameAttr: cn
+      timeoutSec: 10
+      userSearch:
+        baseDN: ou=Users,{{$ldapRoot}}
+        cnAttr: cn
+        emailAttr: mail
+        filter: (objectClass=inetOrgPerson)
+        loginAttr: uid
+        numericalIdAttr: uidNumber

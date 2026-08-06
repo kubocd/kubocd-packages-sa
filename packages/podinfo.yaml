@@ -1,0 +1,52 @@
+
+
+apiVersion: v1alpha1
+name: podinfo
+tag: 6.7.1-c01
+schema:
+  parameters:
+    properties:
+      host: { type: string, required: false }
+      tls: { type: boolean, default: false }
+
+templateHeader: |
+  {{- $uiHost := .Parameters.host | default (printf "%s-%s" .Release.metadata.name .Release.metadata.namespace) -}}
+description: |
+  A sample application on {{ $uiHost }}
+usage:
+  text: |
+    Podinfo can be accessed using {{if .Parameters.tls}}https{{else}}http{{end}}://{{ $uiHost }}.{{ .Inputs.ingress.domain }}
+  html: |
+    Podinfo can be accessed using <a href="{{if .Parameters.tls}}https{{else}}http{{end}}://{{ $uiHost }}.{{ .Inputs.ingress.domain }}">this link</a>
+modules:
+  - name: noname
+    source:
+      helmRepository:
+        url: https://stefanprodan.github.io/podinfo
+        chart: podinfo
+        version: 6.7.1
+    values: |
+      ingress:
+        enabled: true
+        className: {{ .Inputs.ingress.className  }}
+        {{- if .Parameters.tls }}
+        annotations:
+          cert-manager.io/cluster-issuer: {{ required ".Inputs.certManager.clusterIssuers.public must be defined if tls: true" .Inputs.certManager.clusterIssuers.public }}
+        {{- end }}
+        hosts:
+          - host: {{ $uiHost }}.{{ .Inputs.ingress.domain }}
+            paths:
+              - path: /
+                pathType: ImplementationSpecific
+        {{- if .Parameters.tls }}
+        tls:
+          - secretName: {{ .Release.metadata.name }}-tls
+            hosts:
+              - {{ $uiHost }}.{{ .Inputs.ingress.domain }}
+        {{- end }}
+
+inputs:
+  - interface: ingress
+  - interface: cert-manager
+    alias: certManager
+    optional: "{{ not .Parameters.tls }}"

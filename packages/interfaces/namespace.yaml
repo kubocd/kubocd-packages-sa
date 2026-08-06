@@ -2,7 +2,7 @@
 apiVersion: kubocd.kubotal.io/v1alpha1
 kind: ClusterInterface
 metadata:
-  name: cnpg
+  name: namespace
 spec: {}
 
 
