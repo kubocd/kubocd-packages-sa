@@ -1,0 +1,22 @@
+
+---
+apiVersion: kubocd.kubotal.io/v1alpha1
+kind: ClusterInterface
+metadata:
+  name: secret-generator
+spec: {}
+
+---
+apiVersion: kubocd.kubotal.io/v1alpha1
+kind: ClusterInterface
+metadata:
+  name: replicator
+spec: {}
+
+---
+apiVersion: kubocd.kubotal.io/v1alpha1
+kind: ClusterInterface
+metadata:
+  name: reloader
+spec: {}
+

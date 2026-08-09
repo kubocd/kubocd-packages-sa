@@ -10,6 +10,13 @@ spec:
         properties:
           public: { type: string, required: true }
           private: { type: string, required: true }
+      trust:
+        properties:
+          issuerCaSecret:
+            properties:
+              name: { type: string, required: true }
+              key: { type: string, required: true }
+              type:  { type: string, required: false }
 
 
 

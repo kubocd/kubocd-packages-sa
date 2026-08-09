@@ -1,0 +1,109 @@
+
+
+apiVersion: v1alpha1
+name: weboidc
+tag: 0.1.0-c01
+schema:
+  parameters:
+    properties:
+      name: { type: string, default: WEBOIDC }
+      logger:
+        properties:
+          mode: { type: string, default: dev, enum: [ "dev", "json"] }
+          level: { type: string, default: info, enum: [ "error", "info", "debug", "trace"] }
+      host: { type: string, required: true }
+      tls: { type: boolean, default: true }   # Must be set if kubauth is enabled, as currently, kubauth does not allow http:// on redirect URL (except for localhost)
+
+
+# Create a unique instance ID
+templateHeader: |
+  {{ $instanceId := printf "%s-%s" .Release.metadata.namespace .Release.metadata.name }}
+  {{ $secretName := printf "weboidc-%s" $instanceId }}
+
+modules:
+
+  - name: noname
+    source:
+      oci:
+        repository: quay.io/kubosa/charts/weboidc
+        tag: 0.1.0-snapshot
+    timeout: 1m
+    dependsOn:
+      - oidc-client
+    values: |
+      name: {{ .Parameters.name }}
+      log:
+        mode: {{ .Parameters.logger.mode }}
+        level: {{ .Parameters.logger.level  }}
+      ingress:
+        enabled: true
+        class: {{ .Inputs.ingress.className }}
+        host: {{ .Parameters.host }}.{{.Inputs.ingress.domain}}
+        networkPolicy:
+          enabled: {{ .Inputs.cluster.networkPolicies }}
+      server:
+        tls: {{ .Parameters.tls }}
+        certificateIssuer: {{ dig "certManager" "clusterIssuers" "public" "" .Inputs }}
+      {{- if eq .Inputs.oidc.type "kubauth" }}
+      oidc:
+        clientId:
+          value: {{ printf "%s-%s" .Release.spec.targetNamespace $instanceId }}
+        clientSecret:
+          secret:
+            name: {{ $secretName }}
+            key: clientSecret
+        issuerUrl: {{ .Inputs.oidc.issuerURL }}
+        scopes: [ "openid", "offline", "profile", "groups", "email"]
+        ca:
+          secret:
+            name: {{ .Inputs.certManager.trust.issuerCaSecret.name }}
+            key: {{ .Inputs.certManager.trust.issuerCaSecret.key }}
+      {{- end }}
+
+  - name: oidc-client
+    enabled: "{{ eq .Inputs.oidc.type \"kubauth\" }}"
+    source:
+      local:
+        path: ../charts/wrapper/1.0.0
+    values:
+      body: |
+        ---
+        apiVersion: kubauth.kubotal.io/v1alpha1
+        kind: OidcClient
+        metadata:
+          name: {{ $instanceId }}
+        spec:
+          accessTokenLifespan: 1h0m0s
+          description: A first test OIDC client application
+          displayName: {{ .Parameters.name }}
+          entryURL: https://{{ .Parameters.host }}.{{.Inputs.ingress.domain }}
+          grantTypes: [ "refresh_token", "authorization_code" ]
+          idTokenLifespan: 1h0m0s
+          public: false
+          redirectURIs:
+            - {{ if .Parameters.tls }}https{{ else }}http{{ end}}://{{ .Parameters.host }}.{{.Inputs.ingress.domain }}/wo_callback
+          refreshTokenLifespan: 1h0m0s
+          responseTypes: ["id_token", "code", "token", "id_token token", "code id_token", "code token", "code id_token token"]
+          scopes: [ "openid", "offline", "profile", "groups", "email"]
+          secrets:
+            - name:  {{ $secretName }}
+              key: clientSecret
+
+        ---
+        apiVersion: v1
+        kind: Secret
+        metadata:
+          name: {{ $secretName }}
+          annotations:
+            secret-generator.v1.mittwald.de/autogenerate: clientSecret
+        type: Opaque
+
+inputs:
+  - interface: ingress
+  - interface: cluster
+  - interface: secret-generator
+  - interface: oidc
+  - interface: cert-manager
+    optional: "{{- not .Parameters.tls }}"
+    alias: certManager
+

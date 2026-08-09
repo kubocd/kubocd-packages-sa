@@ -1,0 +1,14 @@
+
+apiVersion: kubocd.kubotal.io/v1alpha1
+kind: ClusterInterface
+metadata:
+  name: oidc
+spec:
+  schema:
+    properties:
+      type: { type: string, required: true, description: "'kubauth', 'keycloak', ..." }
+      issuerURL: { type: string, required: true }
+
+
+
+

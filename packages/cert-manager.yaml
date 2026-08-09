@@ -202,4 +202,11 @@ outputs:
       clusterIssuers:
         public: {{ (first .Parameters.issuers.caClusterIssuers).name }}
         private: {{ (first .Parameters.issuers.selfSignedClusterIssuers).name }}
+      {{- if (.Parameters.trust).enabled }} 
+      trust:
+        issuerCaSecret:
+          name: {{ .Parameters.trust.bundle.name }}
+          key: {{ .Parameters.trust.bundle.target.secret.key }}
+          type: cert-manager.io/v1
+      {{- end }}
   
