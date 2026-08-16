@@ -147,16 +147,21 @@ modules:
         runAsNonRoot: true
         runAsUser: 1000
 
-outputs:
+outputs: |
+  {{- if .Parameters.secretGenerator.enabled }}
   - interface: secret-generator
     kind: ClusterConnection
-    disabled: "{{ not .Parameters.secretGenerator.enabled }}"
+  {{- end }}
+  
+  {{- if .Parameters.replicator.enabled }}
   - interface: replicator
     kind: ClusterConnection
-    disabled: "{{ not .Parameters.replicator.enabled }}"
+  {{- end }}
+
+  {{- if .Parameters.replicator.enabled }}
   - interface: reloader
     kind: ClusterConnection
-    disabled: "{{ not .Parameters.reloader.enabled }}"
+  {{- end }}
 
 
   

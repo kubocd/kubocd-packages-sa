@@ -45,8 +45,9 @@ modules:
               - {{ $uiHost }}.{{ .Inputs.ingress.domain }}
         {{- end }}
 
-inputs:
+inputs: |
   - interface: ingress
+  {{- if .Parameters.tls }}
   - interface: cert-manager
     alias: certManager
-    optional: "{{ not .Parameters.tls }}"
+  {{- end }}

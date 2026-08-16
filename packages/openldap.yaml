@@ -151,12 +151,12 @@ inputs:
 outputs:
   - interface: ldap
     kind: ClusterConnection
-    values: |
-      host: {{ .Release.metadata.name }}.{{ .Release.spec.targetNamespace }}.svc
+    values:
+      host: "{{ .Release.metadata.name }}.{{ .Release.spec.targetNamespace }}.svc"
       insecureNoSSL: false
       rootCaSecret: certs-bundle
       bindDN: cn=admin,{{$ldapRoot}}
-      bindPW: {{.Parameters.admin.password }}
+      bindPW: "{{.Parameters.admin.password }}"
       groupSearch:
         baseDN: ou=Groups,{{$ldapRoot}}
         filter: (objectClass=posixgroup)

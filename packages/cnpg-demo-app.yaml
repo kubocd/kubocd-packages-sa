@@ -1,14 +1,23 @@
 
 
 apiVersion: v1alpha1
-name: pg-demo-app
+name: cnpg-demo-app
 tag: 0.1.0-c01
 protected: false
 schema:
   parameters:
     properties:
       host: { type: string }
-      dbRelease: { type: string }
+      db:
+        properties:
+          releaseRef:
+            properties:
+              name: { type: string }
+              namespace: { type: string }
+          connectionRef:
+            properties:
+              name: { type: string }
+              namespace: { type: string }
 
 templateHeader: |
   {{- $uiHost :=  .Parameters.host | default (printf "%s-%s" .Release.metadata.name .Release.metadata.namespace) -}}
@@ -44,5 +53,15 @@ inputs:
     alias: certManager
   - interface: cnpg-db
     alias: postgresql
-    release:
-      name: "{{ .Parameters.dbRelease }}"
+    releaseRef:
+      name: "{{ ((.Parameters.db).releaseRef).name }}"
+      namespace: "{{ ((.Parameters.db).releaseRef).namespace }}"
+    connectionRef:
+      name: "{{ ((.Parameters.db).connectionRef).name }}"
+      namespace: "{{ ((.Parameters.db).connectionRef).namespace }}"
+
+conditions: |
+  - kind: secret
+    name: {{ .Inputs.postgresql.passwordSecret.name }}
+    cel: "'password' in data"
+

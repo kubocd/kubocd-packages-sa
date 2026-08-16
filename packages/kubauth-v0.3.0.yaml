@@ -285,13 +285,14 @@ modules:
         stringData:
           clientSecret: {{ .Parameters.kcClients.privateClientSecret }}
 
-inputs:
+inputs: |
   - interface: ingress
   - interface: cert-manager
     alias: certManager
   - interface: cluster
+  {{- if .Parameters.ldap.enabled }}
   - interface: ldap
-    optional: "{{ not .Parameters.ldap.enabled }}"
+  {{- end }}
 
 outputs:
   - interface: oidc

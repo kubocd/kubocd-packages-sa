@@ -195,10 +195,10 @@ modules:
       - trust
       {{ end }}
 
-outputs:
+outputs: |
   - interface: cert-manager
     kind: ClusterConnection
-    values: |
+    values: 
       clusterIssuers:
         public: {{ (first .Parameters.issuers.caClusterIssuers).name }}
         private: {{ (first .Parameters.issuers.selfSignedClusterIssuers).name }}

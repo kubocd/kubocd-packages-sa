@@ -98,12 +98,12 @@ modules:
             secret-generator.v1.mittwald.de/autogenerate: clientSecret
         type: Opaque
 
-inputs:
+inputs: |
   - interface: ingress
   - interface: cluster
   - interface: secret-generator
   - interface: oidc
+  {{- if .Parameters.tls }}
   - interface: cert-manager
-    optional: "{{- not .Parameters.tls }}"
     alias: certManager
-
+  {{- end }}

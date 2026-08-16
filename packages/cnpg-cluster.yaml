@@ -50,20 +50,20 @@ inputs:
   - interface: storage-block
     alias: storage
 
-outputs:
+outputs: |
+  {{- if .Parameters.exposeCluster }}
   - interface: cnpg-cluster
-    disabled: "{{ not .Parameters.exposeCluster }}"
     values:
       clusterName: "{{ $clusterName }}"
-
+  {{- end }}
+  
+  {{- if .Parameters.database }}
   - interface: cnpg-db
-    disabled: "{{ if .Parameters.database }}false{{else}}true{{end}}"
-    values: |
-      {{- if .Parameters.database }}
+    values:
       host: {{ $clusterName }}-rw.{{ .Release.spec.targetNamespace }}.svc
-      dbName: {{ (.Parameters.database).name }}
-      dbOwner: {{ (.Parameters.database).owner | default (.Parameters.database).name }}
+      dbName: {{ .Parameters.database.name }}
+      dbOwner: {{ .Parameters.database.owner | default .Parameters.database.name }}
       passwordSecret:
         namespace: {{ .Release.spec.targetNamespace }}
         name: {{ $clusterName }}-app
-      {{- end }}
+  {{- end }}

@@ -13,7 +13,14 @@ schema:
     properties:
       redis:
         properties:
-          release: { type: string, required: false}
+          releaseRef:
+            properties:
+              name: { type: string }
+              namespace: { type: string }
+          connectionRef:
+            properties:
+              name: { type: string }
+              namespace: { type: string }
       tls: { type: boolean, default: false }
       host: { type: string, required: false }
 
@@ -51,7 +58,12 @@ inputs:
   - interface: cert-manager
     alias: certManager
   - interface: redis-access
-    release:
-      name: "{{ (.Parameters.redis).release }}"
     alias: redis
+    releaseRef:
+      name: "{{ ((.Parameters.redis).releaseRef).name }}"
+      namespace: "{{ ((.Parameters.redis).releaseRef).namespace }}"
+    connectionRef:
+      name: "{{ ((.Parameters.redis).connectionRef).name }}"
+      namespace: "{{ ((.Parameters.redis).connectionRef).namespace }}"
+
 
