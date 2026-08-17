@@ -140,16 +140,16 @@ usage:
     - Password: {{.Parameters.admin.password }}
   
 inputs:
-  - interface: ingress
-  - interface: storage-block
+  - contract: ingress
+  - contract: storage-block
     alias: storage
-  - interface: cert-manager
+  - contract: cert-manager
     alias: certManager
-  - interface: cluster
+  - contract: cluster
 
 
 outputs:
-  - interface: ldap
+  - contract: ldap
     kind: ClusterConnection
     values:
       host: "{{ .Release.metadata.name }}.{{ .Release.spec.targetNamespace }}.svc"

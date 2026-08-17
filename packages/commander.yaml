@@ -54,10 +54,10 @@ modules:
         {{- end }}
 
 inputs:
-  - interface: ingress
-  - interface: cert-manager
+  - contract: ingress
+  - contract: cert-manager
     alias: certManager
-  - interface: redis-access
+  - contract: redis-access
     alias: redis
     releaseRef:
       name: "{{ ((.Parameters.redis).releaseRef).name }}"

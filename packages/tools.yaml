@@ -149,17 +149,17 @@ modules:
 
 outputs: |
   {{- if .Parameters.secretGenerator.enabled }}
-  - interface: secret-generator
+  - contract: secret-generator
     kind: ClusterConnection
   {{- end }}
   
   {{- if .Parameters.replicator.enabled }}
-  - interface: replicator
+  - contract: replicator
     kind: ClusterConnection
   {{- end }}
 
   {{- if .Parameters.replicator.enabled }}
-  - interface: reloader
+  - contract: reloader
     kind: ClusterConnection
   {{- end }}
 

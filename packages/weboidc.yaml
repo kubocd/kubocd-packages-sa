@@ -99,11 +99,11 @@ modules:
         type: Opaque
 
 inputs: |
-  - interface: ingress
-  - interface: cluster
-  - interface: secret-generator
-  - interface: oidc
+  - contract: ingress
+  - contract: cluster
+  - contract: secret-generator
+  - contract: oidc
   {{- if .Parameters.tls }}
-  - interface: cert-manager
+  - contract: cert-manager
     alias: certManager
   {{- end }}

@@ -42,4 +42,4 @@ modules:
           secured: false
 
 inputs:
-  - interface: cert-manager
+  - contract: cert-manager

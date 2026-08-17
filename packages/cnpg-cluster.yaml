@@ -46,19 +46,19 @@ modules:
           {{- end }}
 
 inputs:
-  - interface: cnpg
-  - interface: storage-block
+  - contract: cnpg
+  - contract: storage-block
     alias: storage
 
 outputs: |
   {{- if .Parameters.exposeCluster }}
-  - interface: cnpg-cluster
+  - contract: cnpg-cluster
     values:
       clusterName: "{{ $clusterName }}"
   {{- end }}
   
   {{- if .Parameters.database }}
-  - interface: cnpg-db
+  - contract: cnpg-db
     values:
       host: {{ $clusterName }}-rw.{{ .Release.spec.targetNamespace }}.svc
       dbName: {{ .Parameters.database.name }}

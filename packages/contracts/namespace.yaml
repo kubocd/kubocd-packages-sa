@@ -1,8 +1,8 @@
 
 apiVersion: kubocd.kubotal.io/v1alpha1
-kind: ClusterInterface
+kind: ClusterContract
 metadata:
-  name: cnpg
+  name: namespace
 spec: {}
 
 

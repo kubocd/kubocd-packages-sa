@@ -30,7 +30,7 @@ modules:
         replicaCount: {{ .Parameters.replicaCount }}
 
 outputs:
-  - interface: redis-access
+  - contract: redis-access
     kind: Connection
     values:
       host: "{{ printf \"%s-master\" .Release.metadata.name }}.{{ .Release.spec.targetNamespace | default .Release.metadata.namespace }}.svc"

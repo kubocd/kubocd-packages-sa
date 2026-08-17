@@ -286,16 +286,16 @@ modules:
           clientSecret: {{ .Parameters.kcClients.privateClientSecret }}
 
 inputs: |
-  - interface: ingress
-  - interface: cert-manager
+  - contract: ingress
+  - contract: cert-manager
     alias: certManager
-  - interface: cluster
+  - contract: cluster
   {{- if .Parameters.ldap.enabled }}
-  - interface: ldap
+  - contract: ldap
   {{- end }}
 
 outputs:
-  - interface: oidc
+  - contract: oidc
     kind: ClusterConnection
     values:
       type: kubauth

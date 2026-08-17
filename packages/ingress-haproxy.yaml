@@ -65,11 +65,11 @@ modules:
           level: {{ .Parameters.logLevel }}
 
 inputs:
-  - interface: load-balancer
-  - interface: cluster
+  - contract: load-balancer
+  - contract: cluster
 
 outputs:
-  - interface: ingress
+  - contract: ingress
     kind: ClusterConnection
     values:
       className: haproxy

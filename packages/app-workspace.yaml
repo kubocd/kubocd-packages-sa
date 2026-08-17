@@ -17,7 +17,7 @@ modules:
       baseNamespace: {{ .Parameters.projectId }}
 
 outputs:
-  - interface: app-workspace
+  - contract: app-workspace
     Kind: ClusterConnection
     values:
       userNamespace: "{{ .Parameters.projectId }}-user"

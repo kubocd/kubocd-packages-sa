@@ -46,8 +46,8 @@ modules:
         {{- end }}
 
 inputs: |
-  - interface: ingress
+  - contract: ingress
   {{- if .Parameters.tls }}
-  - interface: cert-manager
+  - contract: cert-manager
     alias: certManager
   {{- end }}

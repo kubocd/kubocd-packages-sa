@@ -196,7 +196,7 @@ modules:
       {{ end }}
 
 outputs: |
-  - interface: cert-manager
+  - contract: cert-manager
     kind: ClusterConnection
     values: 
       clusterIssuers:

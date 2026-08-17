@@ -51,7 +51,7 @@ modules:
         clusterName: {{ .Inputs.cluster.name }}
 
 inputs:
-  - interface: ingress
-  - interface: cluster
-  - interface: cert-manager
+  - contract: ingress
+  - contract: cluster
+  - contract: cert-manager
     alias: certManager

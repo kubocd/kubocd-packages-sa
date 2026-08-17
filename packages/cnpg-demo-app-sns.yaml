@@ -1,7 +1,7 @@
 
 
 apiVersion: v1alpha1
-name: cnpg-demo-app
+name: cnpg-demo-app-sns
 tag: 0.1.0-c01
 protected: false
 schema:
@@ -10,15 +10,8 @@ schema:
       host: { type: string }
       db:
         properties:
-          connectionKind: { type: string }
-          releaseRef:
-            properties:
-              name: { type: string }
-              namespace: { type: string }
-          connectionRef:
-            properties:
-              name: { type: string }
-              namespace: { type: string }
+          releaseRef: { type: string }
+          connectionRef: { type: string }
 
 templateHeader: |
   {{- $uiHost :=  .Parameters.host | default (printf "%s-%s" .Release.metadata.name .Release.metadata.namespace) -}}
@@ -54,13 +47,10 @@ inputs:
     alias: certManager
   - contract: cnpg-db
     alias: postgresql
-    kind: "{{ (.Parameters.db).connectionKind }}"
     releaseRef:
-      name: "{{ ((.Parameters.db).releaseRef).name }}"
-      namespace: "{{ ((.Parameters.db).releaseRef).namespace }}"
+      name: "{{ (.Parameters.db).releaseRef }}"
     connectionRef:
-      name: "{{ ((.Parameters.db).connectionRef).name }}"
-      namespace: "{{ ((.Parameters.db).connectionRef).namespace }}"
+      name: "{{ (.Parameters.db).connectionRef }}"
 
 conditions: |
   - kind: secret
