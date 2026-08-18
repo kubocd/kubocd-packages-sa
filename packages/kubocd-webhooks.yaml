@@ -17,7 +17,7 @@ modules:
   - name: noname
     source:
       oci:
-        repository: quay.io/kubosa/charts/kubocd-wh
+        repository: quay.io/kubocd/charts/kubocd-wh
         tag: v0.3.1-snapshot
     values: |
       image:
