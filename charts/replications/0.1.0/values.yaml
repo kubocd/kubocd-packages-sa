@@ -1,0 +1,7 @@
+
+
+source:
+  kind: Secret
+  name: # TBD
+
+destinationNamespaces: [] # TBD []string

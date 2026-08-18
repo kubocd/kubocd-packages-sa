@@ -1,0 +1,17 @@
+
+{{- range .Values.destinationNamespaces }}
+
+---
+apiVersion: kubocd.kubotal.io/v1alpha1
+kind: Replication
+metadata:
+  name: {{ $.Values.source.name}}-rep-{{ . }}
+spec:
+  source:
+    kind: {{ $.Values.source.kind }}
+    name: {{ $.Values.source.name}}
+  destination:
+    name: {{ $.Values.source.name}}
+    namespace: {{ . }}
+
+{{- end }}

@@ -1,0 +1,26 @@
+
+apiVersion: v1alpha1
+name: replications
+tag: 0.1.0-c01
+protected: false
+schema:
+  parameters:
+    properties:
+      kind: { type: string, default: "Secret"}
+      name: { type: string, required: true }
+      destinationNamespaces:
+        items: { type: string }
+
+modules:
+  - name: noname
+    source:
+      local:
+        path: ../charts/replications/0.1.0
+    values: |
+      source:
+        kind: {{ .Parameters.kind }}
+        name: {{ .Parameters.name }}
+      destinationNamespaces:
+      {{- range .Parameters.destinationNamespaces }}
+        - {{ . }}
+      {{- end }}
