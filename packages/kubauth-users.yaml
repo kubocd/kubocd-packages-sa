@@ -83,4 +83,3 @@ inputs:
     releaseRef:
       name: "{{ .Parameters.kubauth.releaseRef.name }}"
       namespace: "{{ .Parameters.kubauth.releaseRef.namespace }}"
-      output: kubauth
